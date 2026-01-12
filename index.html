@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TechPartner 4.0: Operational Intelligence</title>
+    <title>TechPartner 5.0: AI Powered Operation</title>
     
     <!-- LIBRARIES -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -11,34 +11,36 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.7/dayjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.7/locale/id.min.js"></script>
+    <!-- Marked for Markdown Rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- Export Engines -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
-    <!-- Word Export Engine -->
-    <script src="https://unpkg.com/docx@7.1.0/build/index.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <script>
-        dayjs.locale('id'); // Set locale Indonesia
+        dayjs.locale('id'); 
         tailwind.config = {
             theme: { 
                 extend: { 
                     colors: { 
-                        primary: '#0f172a', // Slate 900 (Professional Dark)
-                        accent: '#3b82f6', // Blue 500
+                        primary: '#0f172a', 
+                        accent: '#3b82f6', 
+                        ai: '#8b5cf6', // Ungu untuk AI
                         success: '#10b981', 
                         danger: '#ef4444',
                         warning: '#f59e0b'
-                    } 
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
                 } 
             }
         }
     </script>
     <style>
         body { font-family: 'Segoe UI', Inter, sans-serif; background-color: #f8fafc; color: #334155; }
-        
-        /* Card Interactions */
         .asset-card { transition: all 0.2s ease-in-out; border-left: 4px solid transparent; }
         .asset-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
         .asset-card.selected { border: 2px solid #3b82f6; background-color: #eff6ff; }
@@ -47,57 +49,70 @@
         .status-normal { border-left-color: #10b981; }
         .status-servis { border-left-color: #f59e0b; }
         .status-rusak { border-left-color: #ef4444; }
-        .status-overdue { border-left-color: #6366f1; background-color: #eef2ff; } /* New: Overdue Maintenance */
+        .status-overdue { border-left-color: #6366f1; background-color: #eef2ff; }
 
-        /* Timeline & Images */
+        /* AI Chat Bubble */
+        .chat-bubble { position: relative; padding: 10px 15px; border-radius: 12px; max-width: 85%; margin-bottom: 10px; font-size: 0.9rem; line-height: 1.5; }
+        .chat-user { background-color: #3b82f6; color: white; align-self: flex-end; border-bottom-right-radius: 2px; margin-left: auto; }
+        .chat-ai { background-color: #f1f5f9; color: #1e293b; align-self: flex-start; border-bottom-left-radius: 2px; border: 1px solid #e2e8f0; }
+        .chat-ai strong { font-weight: bold; color: #4f46e5; }
+        .chat-ai ul { list-style-type: disc; margin-left: 20px; }
+        
         .timeline-line { position: absolute; left: 24px; top: 0; bottom: 0; width: 2px; background: #e2e8f0; z-index: 0; }
         .img-thumb { width: 100%; height: 140px; object-fit: cover; border-radius: 8px; border: 1px solid #cbd5e1; cursor: pointer; transition: opacity 0.2s; }
-        .img-thumb:hover { opacity: 0.9; }
         
-        /* Print */
         @media print {
             @page { size: A4; margin: 10mm; }
             body { background: white; -webkit-print-color-adjust: exact; }
-            nav, .no-print, .tab-nav, #bulk-actions { display: none !important; }
+            nav, .no-print, .tab-nav, #bulk-actions, #ai-float-btn { display: none !important; }
             #view-assets, #view-activity, #view-finance { display: block !important; margin-bottom: 40px; page-break-after: always; }
             .hidden-print { display: none !important; }
             .grid-cols-1 { grid-template-columns: repeat(2, 1fr) !important; }
         }
     </style>
 </head>
-<body class="h-screen flex flex-col overflow-hidden">
+<body class="h-screen flex flex-col overflow-hidden relative">
 
     <!-- NAVBAR -->
     <nav class="bg-primary text-white px-6 py-4 flex justify-between items-center shadow-lg z-30 no-print">
         <div class="flex items-center gap-4">
-            <div class="bg-accent/20 p-2 rounded-lg border border-accent/50">
-                <i class="fa-solid fa-server text-accent text-xl"></i>
+            <div class="bg-gradient-to-br from-accent to-indigo-600 p-2 rounded-lg shadow-lg shadow-blue-500/30">
+                <i class="fa-solid fa-server text-white text-xl"></i>
             </div>
             <div>
-                <h1 class="font-bold text-xl leading-none tracking-tight">TechPartner <span class="text-accent">PRO</span></h1>
-                <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Sistem Manajemen Operasional</p>
+                <h1 class="font-bold text-xl leading-none tracking-tight">TechPartner <span class="text-accent font-black">5.0</span></h1>
+                <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-1 flex items-center gap-1">
+                    <i class="fa-solid fa-microchip text-ai"></i> AI Integrated System
+                </p>
             </div>
         </div>
         
         <div class="flex gap-3 items-center">
-            <!-- Sync Status -->
-            <button onclick="app.syncData()" class="group relative px-4 py-2 rounded-full bg-slate-800 hover:bg-slate-700 transition border border-slate-700 flex items-center gap-2" title="Sync Cloud">
-                <div id="sync-badge" class="w-2 h-2 bg-success rounded-full animate-pulse"></div>
-                <span class="text-xs font-bold text-slate-300 group-hover:text-white">Cloud Sync</span>
+            <!-- AI Button in Navbar -->
+            <button onclick="ui.showAIModal()" class="hidden md:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 rounded-full hover:shadow-lg hover:shadow-violet-500/30 transition border border-white/10 group">
+                <i class="fa-solid fa-robot text-white group-hover:animate-bounce"></i>
+                <span class="text-xs font-bold">Asisten Cerdas</span>
             </button>
-            <button onclick="ui.showSettings()" class="p-2 rounded-full hover:bg-slate-700 transition text-slate-400 hover:text-white">
+
+            <div class="h-8 w-px bg-slate-700 mx-2"></div>
+
+            <button onclick="app.syncData()" class="group relative px-3 py-2 rounded-lg hover:bg-slate-800 transition border border-transparent hover:border-slate-700 flex items-center gap-2" title="Sync Cloud">
+                <div id="sync-badge" class="w-2 h-2 bg-success rounded-full"></div>
+                <i class="fa-solid fa-cloud text-slate-400 group-hover:text-white"></i>
+            </button>
+            <button onclick="ui.showSettings()" class="p-2 rounded-lg hover:bg-slate-800 transition text-slate-400 hover:text-white">
                 <i class="fa-solid fa-gear text-lg"></i>
             </button>
         </div>
     </nav>
 
     <!-- TABS NAVIGATION -->
-    <div class="bg-white border-b px-6 flex gap-8 text-sm overflow-x-auto tab-nav no-print shadow-[0_4px_6px_-1px_rgba(0,0,0,0.02)] z-20">
+    <div class="bg-white border-b px-6 flex gap-8 text-sm overflow-x-auto tab-nav no-print shadow-sm z-20">
         <button onclick="ui.switchTab('assets')" id="tab-assets" class="py-4 border-b-2 border-accent text-primary font-bold flex items-center gap-2 transition hover:bg-slate-50 px-4">
-            <i class="fa-solid fa-boxes-stacked"></i> Manajemen Aset
+            <i class="fa-solid fa-boxes-stacked"></i> Aset
         </button>
         <button onclick="ui.switchTab('activity')" id="tab-activity" class="py-4 border-b-2 border-transparent text-slate-500 font-medium flex items-center gap-2 transition hover:text-slate-800 hover:bg-slate-50 px-4">
-            <i class="fa-solid fa-list-check"></i> Laporan Kerja
+            <i class="fa-solid fa-list-check"></i> Laporan
         </button>
         <button onclick="ui.switchTab('finance')" id="tab-finance" class="py-4 border-b-2 border-transparent text-slate-500 font-medium flex items-center gap-2 transition hover:text-slate-800 hover:bg-slate-50 px-4">
             <i class="fa-solid fa-chart-pie"></i> Keuangan
@@ -107,45 +122,42 @@
     <!-- MAIN CONTENT AREA -->
     <main class="flex-1 overflow-y-auto p-6 bg-slate-50 relative scroll-smooth">
         
-        <!-- ================= VIEW 1: ASSETS & MAINTENANCE ================= -->
+        <!-- ================= VIEW 1: ASSETS ================= -->
         <div id="view-assets" class="block max-w-7xl mx-auto">
             
-            <!-- SMART INSIGHT HEADER -->
+            <!-- TOOLBAR -->
             <div class="flex flex-col md:flex-row gap-4 mb-6 sticky top-0 bg-slate-50/95 backdrop-blur z-10 py-3 no-print items-center">
                 <div class="relative flex-1 w-full">
                     <i class="fa-solid fa-search absolute left-4 top-3.5 text-slate-400"></i>
-                    <input type="text" id="searchAsset" onkeyup="app.renderAssets()" placeholder="Cari aset (Lokasi, Merk, Kondisi)..." class="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition">
+                    <input type="text" id="searchAsset" onkeyup="app.renderAssets()" placeholder="Cari aset..." class="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition">
                 </div>
                 <div class="flex gap-2 w-full md:w-auto overflow-x-auto">
-                     <!-- DOWNLOAD SMART REPORT BUTTON -->
-                     <button onclick="app.generateSmartReport()" class="px-5 py-3 bg-slate-800 text-white rounded-xl text-sm font-bold hover:bg-slate-900 shadow-lg shadow-slate-500/20 transition flex items-center gap-2 whitespace-nowrap">
-                        <i class="fa-solid fa-file-pdf"></i>
-                        <span>Download Laporan Eksekutif</span>
+                     <button onclick="app.generateSmartReport()" class="px-4 py-3 bg-slate-800 text-white rounded-xl text-sm font-bold hover:bg-slate-900 shadow-lg transition flex items-center gap-2 whitespace-nowrap">
+                        <i class="fa-solid fa-file-pdf"></i> Eksekutif Report
                     </button>
-                    <button onclick="ui.showAssetModal()" class="px-5 py-3 bg-accent text-white rounded-xl text-sm font-bold hover:bg-blue-600 shadow-lg shadow-blue-500/30 transition flex items-center gap-2 whitespace-nowrap">
+                    <button onclick="ui.showAssetModal()" class="px-4 py-3 bg-accent text-white rounded-xl text-sm font-bold hover:bg-blue-600 shadow-lg transition flex items-center gap-2 whitespace-nowrap">
                         <i class="fa-solid fa-plus"></i> Tambah
                     </button>
                 </div>
             </div>
 
-            <!-- ANALYTICS CARDS -->
+            <!-- STATS CARDS -->
             <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
                 <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
                     <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Aset</div>
                     <div class="text-3xl font-black text-slate-800" id="stat-total">0</div>
                 </div>
-                <!-- Smart Alert: Overdue Service -->
-                <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 shadow-sm relative overflow-hidden group">
-                    <div class="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition"><i class="fa-solid fa-clock-rotate-left text-4xl text-indigo-600"></i></div>
-                    <div class="text-[10px] text-indigo-500 font-bold uppercase tracking-wider">Telat Servis (>3 Bln)</div>
+                <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 shadow-sm relative overflow-hidden group cursor-help" title="Belum diservis > 3 bulan">
+                    <div class="text-[10px] text-indigo-500 font-bold uppercase tracking-wider">Telat Servis</div>
                     <div class="text-3xl font-black text-indigo-600" id="stat-overdue">0</div>
+                    <i class="fa-solid fa-triangle-exclamation absolute right-2 bottom-2 text-indigo-200 text-4xl -z-0"></i>
                 </div>
                 <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm border-b-4 border-b-success">
-                    <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Kondisi Prima</div>
+                    <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Normal</div>
                     <div class="text-3xl font-black text-success" id="stat-normal">0</div>
                 </div>
                 <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm border-b-4 border-b-danger">
-                    <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Rusak Berat</div>
+                    <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Rusak</div>
                     <div class="text-3xl font-black text-danger" id="stat-issue">0</div>
                 </div>
                 <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm border-b-4 border-b-warning">
@@ -155,12 +167,10 @@
             </div>
 
             <!-- ASSET GRID -->
-            <div id="asset-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-20">
-                <!-- Javascript will populate this -->
-            </div>
+            <div id="asset-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-20"></div>
         </div>
 
-        <!-- ================= VIEW 2: ACTIVITY REPORT ================= -->
+        <!-- ================= VIEW 2: ACTIVITY ================= -->
         <div id="view-activity" class="hidden max-w-5xl mx-auto pb-20">
             <div class="flex justify-between items-center mb-6 no-print">
                 <h2 class="text-2xl font-black text-slate-800">Laporan Kinerja</h2>
@@ -168,76 +178,59 @@
                     <i class="fa-solid fa-pen-nib mr-2"></i> Input Kegiatan
                 </button>
             </div>
-
-            <!-- Report Generator -->
+            <!-- Report Generator Panel -->
             <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-8 no-print">
                 <div class="flex flex-col md:flex-row items-end gap-4 justify-between">
                     <div class="w-full md:w-auto">
-                        <h3 class="font-bold text-slate-700 mb-1"><i class="fa-solid fa-file-contract mr-2 text-accent"></i>Export Laporan Mingguan/Bulanan</h3>
-                        <p class="text-xs text-slate-500">Pilih rentang tanggal untuk laporan ke Manajemen.</p>
+                        <h3 class="font-bold text-slate-700 mb-1">Export Laporan</h3>
+                        <p class="text-xs text-slate-500">Pilih rentang tanggal laporan.</p>
                     </div>
                     <div class="flex gap-3 w-full md:w-auto bg-slate-50 p-2 rounded-xl border border-slate-100">
-                        <div>
-                            <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Dari</label>
-                            <input type="date" id="report-start" class="border p-2 rounded-lg text-sm bg-white">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Sampai</label>
-                            <input type="date" id="report-end" class="border p-2 rounded-lg text-sm bg-white">
-                        </div>
+                        <div><label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Dari</label><input type="date" id="report-start" class="border p-2 rounded-lg text-sm bg-white"></div>
+                        <div><label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Sampai</label><input type="date" id="report-end" class="border p-2 rounded-lg text-sm bg-white"></div>
                     </div>
                     <div class="flex gap-2 w-full md:w-auto">
-                        <button onclick="app.downloadWorkReport('pdf')" class="flex-1 px-4 py-2 bg-red-50 text-red-600 border border-red-100 rounded-lg font-bold hover:bg-red-100 transition text-xs flex flex-col items-center justify-center gap-1">
-                            <i class="fa-solid fa-file-pdf text-lg"></i> PDF
-                        </button>
-                        <button onclick="app.downloadWorkReport('word')" class="flex-1 px-4 py-2 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg font-bold hover:bg-blue-100 transition text-xs flex flex-col items-center justify-center gap-1">
-                            <i class="fa-solid fa-file-word text-lg"></i> Word
-                        </button>
-                        <button onclick="app.downloadWorkReport('excel')" class="flex-1 px-4 py-2 bg-green-50 text-green-600 border border-green-100 rounded-lg font-bold hover:bg-green-100 transition text-xs flex flex-col items-center justify-center gap-1">
-                            <i class="fa-solid fa-file-excel text-lg"></i> Excel
-                        </button>
+                        <button onclick="app.downloadWorkReport('pdf')" class="flex-1 px-4 py-2 bg-red-50 text-red-600 border border-red-100 rounded-lg font-bold hover:bg-red-100 transition text-xs"><i class="fa-solid fa-file-pdf block text-lg mb-1"></i> PDF</button>
+                        <button onclick="app.downloadWorkReport('excel')" class="flex-1 px-4 py-2 bg-green-50 text-green-600 border border-green-100 rounded-lg font-bold hover:bg-green-100 transition text-xs"><i class="fa-solid fa-file-excel block text-lg mb-1"></i> Excel</button>
                     </div>
                 </div>
             </div>
-
-            <!-- Activity List -->
             <div class="relative pl-6 space-y-8" id="activity-list"></div>
             <div id="empty-activity" class="hidden text-center py-12 text-slate-400">Belum ada data kegiatan.</div>
         </div>
 
         <!-- ================= VIEW 3: FINANCE ================= -->
         <div id="view-finance" class="hidden max-w-4xl mx-auto pb-20">
-            <div class="bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl p-8 text-white shadow-xl mb-8 relative overflow-hidden">
-                <div class="relative z-10 flex flex-col md:flex-row justify-between items-end gap-6">
+            <div class="bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl p-8 text-white shadow-xl mb-8">
+                <div class="flex flex-col md:flex-row justify-between items-end gap-6">
                     <div>
                         <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">Total Pengeluaran (YTD)</p>
                         <h2 class="text-4xl md:text-5xl font-black tracking-tight" id="finance-total">Rp 0</h2>
                     </div>
                     <div class="flex gap-3">
-                        <button onclick="ui.showFinanceModal()" class="bg-white text-slate-900 px-5 py-2.5 rounded-xl text-sm font-bold shadow hover:bg-slate-100 transition">
-                            <i class="fa-solid fa-plus mr-2"></i> Input Bon
-                        </button>
-                        <button onclick="app.downloadExcel()" class="bg-slate-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-600 transition">
-                            <i class="fa-solid fa-download mr-2"></i> Rekap Data
-                        </button>
+                        <button onclick="ui.showFinanceModal()" class="bg-white text-slate-900 px-5 py-2.5 rounded-xl text-sm font-bold shadow hover:bg-slate-100 transition"><i class="fa-solid fa-plus mr-2"></i> Input Bon</button>
+                        <button onclick="app.downloadExcel()" class="bg-slate-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-600 transition"><i class="fa-solid fa-download mr-2"></i> Rekap</button>
                     </div>
                 </div>
             </div>
-            
-            <h3 class="font-bold text-slate-700 mb-4 pl-1 border-l-4 border-accent ml-1"> Riwayat Belanja</h3>
+            <h3 class="font-bold text-slate-700 mb-4 pl-1 border-l-4 border-accent ml-1">Riwayat Belanja</h3>
             <div id="finance-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
             <div id="empty-finance" class="hidden text-center py-12 text-slate-400">Belum ada data pengeluaran.</div>
         </div>
-
     </main>
 
-    <!-- BULK ACTIONS (Hidden by default) -->
+    <!-- FLOATING AI BUTTON (Mobile Only) -->
+    <button id="ai-float-btn" onclick="ui.showAIModal()" class="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-full shadow-2xl z-50 flex items-center justify-center animate-bounce-slow border-2 border-white/20">
+        <i class="fa-solid fa-robot text-2xl"></i>
+    </button>
+
+    <!-- BULK ACTIONS -->
     <div id="bulk-actions" class="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.1)] z-40 transform translate-y-full transition-transform duration-300 flex justify-between items-center no-print">
         <div class="font-bold text-slate-700"><span class="bg-slate-100 px-3 py-1 rounded text-sm mr-2" id="selected-count">0</span>Item Dipilih</div>
         <div class="flex gap-2">
             <button onclick="app.bulkDelete()" class="px-4 py-2 bg-red-50 text-red-600 rounded-lg text-xs font-bold border border-red-100">Hapus</button>
             <button onclick="app.bulkUpdateStatus('Perlu Servis')" class="px-4 py-2 bg-warning/10 text-warning rounded-lg text-xs font-bold border border-warning/20">Mark Servis</button>
-            <button onclick="app.bulkUpdateStatus('Normal')" class="px-4 py-2 bg-success text-white rounded-lg text-xs font-bold shadow-lg shadow-success/30">Mark Normal</button>
+            <button onclick="app.bulkUpdateStatus('Normal')" class="px-4 py-2 bg-success text-white rounded-lg text-xs font-bold shadow-lg">Mark Normal</button>
         </div>
     </div>
 
@@ -245,7 +238,7 @@
 
     <!-- ASSET MODAL -->
     <div id="modal-asset" class="fixed inset-0 bg-slate-900/60 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] animate-fade-in-up">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
             <div class="p-5 border-b flex justify-between items-center">
                 <h3 class="font-bold text-lg text-slate-800" id="asset-modal-title">Data Aset</h3>
                 <button onclick="ui.closeModal('modal-asset')" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-times text-xl"></i></button>
@@ -254,21 +247,11 @@
                 <form id="assetForm" onsubmit="app.saveAsset(event)">
                     <input type="hidden" id="asset-id">
                     <div class="grid grid-cols-2 gap-3 mb-4">
-                        <label class="cursor-pointer relative">
-                            <input type="radio" name="cat" value="AC" checked class="peer hidden" onchange="ui.toggleFormType()">
-                            <div class="peer-checked:bg-slate-800 peer-checked:text-white border border-slate-200 p-3 rounded-xl text-center hover:bg-slate-50 transition">
-                                <i class="fa-solid fa-wind text-xl mb-1 block"></i><span class="text-xs font-bold">AC</span>
-                            </div>
-                        </label>
-                        <label class="cursor-pointer relative">
-                            <input type="radio" name="cat" value="Light" class="peer hidden" onchange="ui.toggleFormType()">
-                            <div class="peer-checked:bg-yellow-500 peer-checked:text-white border border-slate-200 p-3 rounded-xl text-center hover:bg-slate-50 transition">
-                                <i class="fa-regular fa-lightbulb text-xl mb-1 block"></i><span class="text-xs font-bold">Lampu</span>
-                            </div>
-                        </label>
+                        <label class="cursor-pointer relative"><input type="radio" name="cat" value="AC" checked class="peer hidden" onchange="ui.toggleFormType()"><div class="peer-checked:bg-slate-800 peer-checked:text-white border border-slate-200 p-3 rounded-xl text-center hover:bg-slate-50 transition"><i class="fa-solid fa-wind text-xl mb-1 block"></i><span class="text-xs font-bold">AC</span></div></label>
+                        <label class="cursor-pointer relative"><input type="radio" name="cat" value="Light" class="peer hidden" onchange="ui.toggleFormType()"><div class="peer-checked:bg-yellow-500 peer-checked:text-white border border-slate-200 p-3 rounded-xl text-center hover:bg-slate-50 transition"><i class="fa-regular fa-lightbulb text-xl mb-1 block"></i><span class="text-xs font-bold">Lampu</span></div></label>
                     </div>
                     <div class="space-y-3">
-                        <input id="asset-loc" class="w-full border p-3 rounded-lg text-sm focus:border-accent outline-none" placeholder="Lokasi (cth: Ruang Server Lt.2)" required>
+                        <input id="asset-loc" class="w-full border p-3 rounded-lg text-sm outline-none focus:border-accent" placeholder="Lokasi (cth: Ruang Server Lt.2)" required>
                         <div class="flex gap-3">
                             <input id="asset-brand" class="w-1/2 border p-3 rounded-lg text-sm outline-none" placeholder="Merk">
                             <input id="asset-model" class="w-1/2 border p-3 rounded-lg text-sm outline-none" placeholder="Model/PK">
@@ -281,7 +264,12 @@
                                 <option value="Perlu Servis">⚠️ Perlu Servis</option>
                                 <option value="Rusak">❌ Rusak</option>
                             </select>
-                            <textarea id="asset-issue" class="w-full border p-2.5 rounded-lg text-sm h-20 hidden outline-none focus:border-red-400 bg-white" placeholder="Deskripsi kerusakan..."></textarea>
+                            <textarea id="asset-issue" class="w-full border p-2.5 rounded-lg text-sm h-20 hidden outline-none focus:border-red-400 bg-white mb-2" placeholder="Deskripsi kerusakan..."></textarea>
+                            
+                            <!-- AI Diagnosis Button -->
+                            <button type="button" onclick="ai.diagnoseIssue()" id="btn-diagnose" class="hidden w-full py-2 bg-violet-100 text-violet-700 rounded-lg text-xs font-bold hover:bg-violet-200 transition items-center justify-center gap-2">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> Analisa Kerusakan dengan AI
+                            </button>
                         </div>
                         <div class="grid grid-cols-2 gap-3">
                             <div><label class="text-[10px] font-bold uppercase text-slate-400">Tgl Pasang</label><input type="date" id="asset-install" class="w-full border p-2 rounded-lg text-sm text-slate-600"></div>
@@ -294,46 +282,59 @@
         </div>
     </div>
 
-    <!-- ACTIVITY MODAL -->
+    <!-- AI ASSISTANT MODAL (NEW) -->
+    <div id="modal-ai" class="fixed inset-0 bg-slate-900/80 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col h-[80vh] overflow-hidden border border-white/20">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-violet-600 to-indigo-700 p-4 flex justify-between items-center text-white">
+                <div class="flex items-center gap-3">
+                    <div class="bg-white/20 p-2 rounded-lg"><i class="fa-solid fa-robot text-xl"></i></div>
+                    <div>
+                        <h3 class="font-bold text-lg leading-none">AI Operation Consultant</h3>
+                        <p class="text-[10px] text-violet-200 opacity-80">Powered by Gemini • Private Data Context</p>
+                    </div>
+                </div>
+                <button onclick="ui.closeModal('modal-ai')" class="text-white/60 hover:text-white"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            
+            <!-- Chat Area -->
+            <div id="ai-chat-box" class="flex-1 overflow-y-auto p-5 bg-slate-50 space-y-4 font-sans">
+                <div class="chat-bubble chat-ai">
+                    Halo! Saya asisten AI yang terhubung dengan database aset dan maintenance Anda.
+                    <br><br>
+                    Anda bisa tanya hal seperti:
+                    <ul class="mt-2 text-xs text-slate-600 space-y-1">
+                        <li>• "Berapa total biaya servis bulan ini?"</li>
+                        <li>• "Buatkan jadwal prioritas maintenance untuk AC yang telat servis."</li>
+                        <li>• "Analisa aset mana yang paling sering rusak."</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="p-4 bg-white border-t border-slate-200">
+                <div class="flex gap-2">
+                    <input type="text" id="ai-input" class="flex-1 border border-slate-300 rounded-xl px-4 py-3 focus:border-violet-500 focus:ring-2 focus:ring-violet-200 outline-none transition" placeholder="Tanya sesuatu tentang data Anda..." onkeypress="if(event.key==='Enter') ai.send()">
+                    <button onclick="ai.send()" id="ai-send-btn" class="bg-violet-600 text-white px-5 rounded-xl hover:bg-violet-700 transition shadow-lg shadow-violet-500/20">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </div>
+                <p class="text-[10px] text-center text-slate-400 mt-2">Data dikirim ke Google Gemini API untuk diproses.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ACTIVITY & FINANCE MODALS (Standard) -->
     <div id="modal-activity" class="fixed inset-0 bg-slate-900/60 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
-            <div class="p-5 border-b flex justify-between items-center bg-slate-50 rounded-t-2xl">
-                <h3 class="font-bold text-lg text-slate-800">Catat Kegiatan</h3>
-                <button onclick="ui.closeModal('modal-activity')" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-times text-xl"></i></button>
-            </div>
+            <div class="p-5 border-b flex justify-between items-center bg-slate-50 rounded-t-2xl"><h3 class="font-bold text-lg text-slate-800">Catat Kegiatan</h3><button onclick="ui.closeModal('modal-activity')" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-times text-xl"></i></button></div>
             <div class="p-6 overflow-y-auto">
                 <form onsubmit="app.saveActivity(event)">
                     <div class="space-y-4">
-                        <div>
-                            <label class="text-xs font-bold text-slate-500 uppercase">Judul Kegiatan</label>
-                            <input id="act-title" class="w-full border p-3 rounded-lg font-bold mt-1 focus:border-accent outline-none" placeholder="Cth: Cek AC Bocor" required>
-                        </div>
-                        <div class="flex gap-3">
-                            <div class="w-1/3">
-                                <label class="text-xs font-bold text-slate-500 uppercase">Jam</label>
-                                <input type="time" id="act-time" class="w-full border p-3 rounded-lg text-sm mt-1" required>
-                            </div>
-                            <div class="flex-1">
-                                <label class="text-xs font-bold text-slate-500 uppercase">Kategori</label>
-                                <select id="act-tag" class="w-full border p-3 rounded-lg text-sm mt-1 bg-white">
-                                    <option value="Umum">Umum</option>
-                                    <option value="IT">IT Support</option>
-                                    <option value="GA">Maintenance GA</option>
-                                    <option value="Servis">Servis Rutin</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="text-xs font-bold text-slate-500 uppercase">Deskripsi</label>
-                            <textarea id="act-desc" class="w-full border p-3 rounded-lg text-sm h-24 mt-1 focus:border-accent outline-none"></textarea>
-                        </div>
-                        <div class="bg-slate-50 p-4 rounded-xl border border-dashed border-slate-300 text-center">
-                            <input type="file" id="act-photo" accept="image/*" class="hidden" onchange="ut.previewImage(this, 'act-preview')">
-                            <label for="act-photo" class="inline-block px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-600 cursor-pointer hover:bg-slate-100 transition">
-                                <i class="fa-solid fa-camera mr-2"></i> Tambah Foto
-                            </label>
-                            <img id="act-preview" class="hidden img-preview mt-3 rounded-lg border mx-auto max-h-40">
-                        </div>
+                        <input id="act-title" class="w-full border p-3 rounded-lg font-bold outline-none" placeholder="Judul (Cth: Cek AC Bocor)" required>
+                        <div class="flex gap-3"><input type="time" id="act-time" class="w-1/3 border p-3 rounded-lg text-sm" required><select id="act-tag" class="w-full border p-3 rounded-lg text-sm bg-white"><option value="Umum">Umum</option><option value="IT">IT Support</option><option value="GA">Maintenance GA</option><option value="Servis">Servis Rutin</option></select></div>
+                        <textarea id="act-desc" class="w-full border p-3 rounded-lg text-sm h-24 outline-none" placeholder="Deskripsi"></textarea>
+                        <div class="bg-slate-50 p-4 rounded-xl border border-dashed border-slate-300 text-center"><input type="file" id="act-photo" accept="image/*" class="hidden" onchange="ut.previewImage(this, 'act-preview')"><label for="act-photo" class="inline-block px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold cursor-pointer hover:bg-slate-100">Tambah Foto</label><img id="act-preview" class="hidden img-preview mt-3 rounded-lg border mx-auto max-h-40"></div>
                     </div>
                     <button type="submit" class="w-full bg-slate-800 text-white py-3 mt-6 rounded-xl font-bold hover:bg-slate-700 transition">Simpan Log</button>
                 </form>
@@ -341,29 +342,16 @@
         </div>
     </div>
 
-    <!-- FINANCE MODAL -->
     <div id="modal-finance" class="fixed inset-0 bg-slate-900/60 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh]">
-            <div class="p-5 border-b flex justify-between items-center bg-emerald-50 rounded-t-2xl">
-                <h3 class="font-bold text-lg text-emerald-800">Input Pengeluaran</h3>
-                <button onclick="ui.closeModal('modal-finance')" class="text-emerald-400 hover:text-emerald-600"><i class="fa-solid fa-times text-xl"></i></button>
-            </div>
+            <div class="p-5 border-b flex justify-between items-center bg-emerald-50 rounded-t-2xl"><h3 class="font-bold text-lg text-emerald-800">Input Pengeluaran</h3><button onclick="ui.closeModal('modal-finance')" class="text-emerald-400 hover:text-emerald-600"><i class="fa-solid fa-times text-xl"></i></button></div>
             <div class="p-6 overflow-y-auto">
                 <form onsubmit="app.saveFinance(event)">
                     <div class="space-y-4">
-                        <input id="fin-item" class="w-full border border-slate-300 p-3 rounded-lg font-bold focus:border-emerald-500 outline-none" placeholder="Nama Barang (Cth: Freon R32)" required>
-                        <div class="relative">
-                            <span class="absolute left-3 top-3 text-slate-400 font-bold">Rp</span>
-                            <input type="number" id="fin-cost" class="w-full border border-slate-300 p-3 pl-10 rounded-lg text-lg font-mono font-bold text-emerald-600 focus:border-emerald-500 outline-none" placeholder="0" required>
-                        </div>
-                        <input type="date" id="fin-date" class="w-full border p-3 rounded-lg text-sm text-slate-600" required>
-                        <div class="bg-emerald-50/50 p-4 rounded-xl border border-dashed border-emerald-200 text-center">
-                            <input type="file" id="fin-photo" accept="image/*" class="hidden" onchange="ut.previewImage(this, 'fin-preview')">
-                            <label for="fin-photo" class="inline-block px-4 py-2 bg-white border border-emerald-100 rounded-lg text-sm font-bold text-emerald-600 cursor-pointer hover:bg-emerald-50 transition">
-                                <i class="fa-solid fa-receipt mr-2"></i> Upload Nota
-                            </label>
-                            <img id="fin-preview" class="hidden img-preview mt-3 rounded-lg border mx-auto max-h-40">
-                        </div>
+                        <input id="fin-item" class="w-full border border-slate-300 p-3 rounded-lg font-bold outline-none" placeholder="Nama Barang" required>
+                        <div class="relative"><span class="absolute left-3 top-3 text-slate-400 font-bold">Rp</span><input type="number" id="fin-cost" class="w-full border border-slate-300 p-3 pl-10 rounded-lg text-lg font-mono font-bold text-emerald-600 outline-none" placeholder="0" required></div>
+                        <input type="date" id="fin-date" class="w-full border p-3 rounded-lg text-sm" required>
+                        <div class="bg-emerald-50/50 p-4 rounded-xl border border-dashed border-emerald-200 text-center"><input type="file" id="fin-photo" accept="image/*" class="hidden" onchange="ut.previewImage(this, 'fin-preview')"><label for="fin-photo" class="inline-block px-4 py-2 bg-white border border-emerald-100 rounded-lg text-sm font-bold text-emerald-600 cursor-pointer hover:bg-emerald-50">Upload Nota</label><img id="fin-preview" class="hidden img-preview mt-3 rounded-lg border mx-auto max-h-40"></div>
                     </div>
                     <button type="submit" class="w-full bg-emerald-600 text-white py-3 mt-6 rounded-xl font-bold hover:bg-emerald-700 transition">Simpan</button>
                 </form>
@@ -375,35 +363,40 @@
     <div id="modal-settings" class="fixed inset-0 bg-slate-900/80 hidden z-50 items-center justify-center p-4 no-print">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
             <div class="bg-slate-900 text-white p-5">
-                <h3 class="font-bold text-lg"><i class="fa-brands fa-github mr-2"></i>Konfigurasi Cloud</h3>
-                <p class="text-xs text-slate-400 mt-1">Pastikan Token GitHub Anda valid.</p>
+                <h3 class="font-bold text-lg"><i class="fa-solid fa-sliders mr-2"></i>Pengaturan</h3>
+                <p class="text-xs text-slate-400 mt-1">Konfigurasi Cloud & AI</p>
             </div>
-            <div class="p-6 space-y-3">
-                <input id="conf-owner" class="w-full border p-2.5 rounded-lg text-sm" placeholder="GitHub Username">
-                <input id="conf-repo" class="w-full border p-2.5 rounded-lg text-sm" placeholder="Repository Name">
-                <input type="password" id="conf-token" class="w-full border p-2.5 rounded-lg text-sm" placeholder="GitHub Token (ghp_...)">
-                <input id="conf-path" class="w-full border p-2.5 rounded-lg text-sm bg-slate-100 text-slate-500" value="data/db_partner.json" readonly>
+            <div class="p-6 space-y-4 overflow-y-auto max-h-[70vh]">
+                <!-- Cloud Section -->
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">GitHub Cloud</label>
+                    <input id="conf-owner" class="w-full border p-2.5 rounded-lg text-xs mb-2" placeholder="Username">
+                    <input id="conf-repo" class="w-full border p-2.5 rounded-lg text-xs mb-2" placeholder="Repo Name">
+                    <input type="password" id="conf-token" class="w-full border p-2.5 rounded-lg text-xs" placeholder="GitHub Token (ghp_...)">
+                </div>
+                <hr>
+                <!-- AI Section -->
+                <div>
+                    <label class="text-[10px] font-bold text-violet-500 uppercase tracking-wider mb-1 block">Google Gemini AI</label>
+                    <input type="password" id="conf-gemini" class="w-full border border-violet-200 bg-violet-50 p-2.5 rounded-lg text-xs focus:ring-2 focus:ring-violet-500 outline-none" placeholder="Paste Gemini API Key here...">
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-[10px] text-violet-600 hover:underline mt-1 block text-right">Dapatkan API Key Gratis <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                </div>
+
                 <button onclick="app.saveSettings()" class="w-full mt-2 bg-accent text-white py-3 rounded-xl font-bold hover:bg-blue-600 transition">Simpan & Koneksi</button>
-                <button onclick="ui.closeModal('modal-settings')" class="w-full py-2 text-slate-400 text-xs hover:text-slate-600">Batal</button>
+                <button onclick="ui.closeModal('modal-settings')" class="w-full py-2 text-slate-400 text-xs hover:text-slate-600">Tutup</button>
             </div>
         </div>
     </div>
 
-    <!-- LOGIC SYSTEM -->
+    <!-- LOGIC -->
     <script>
-        // --- UTILITIES ---
+        // --- UTILS ---
         const ut = {
             id: () => Date.now().toString(36) + Math.random().toString(36).substr(2),
             fmtRp: (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n),
             b64Enc: (str) => btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (m, p1) => String.fromCharCode('0x' + p1))),
             b64Dec: (str) => decodeURIComponent(atob(str).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')),
-            
-            // Checks if date is older than 3 months (90 days)
-            isOverdue: (dateStr) => {
-                if(!dateStr) return false;
-                return dayjs().diff(dayjs(dateStr), 'day') > 90;
-            },
-
+            isOverdue: (dateStr) => dateStr ? dayjs().diff(dayjs(dateStr), 'day') > 90 : false,
             previewImage: (input, imgId) => {
                 if (input.files && input.files[0]) {
                     const reader = new FileReader();
@@ -415,7 +408,6 @@
                     reader.readAsDataURL(input.files[0]);
                 }
             },
-
             compress: (file) => {
                 return new Promise((resolve) => {
                     if (!file) { resolve(null); return; }
@@ -439,7 +431,7 @@
             }
         };
 
-        // --- STATE MANAGEMENT ---
+        // --- STATE ---
         const state = {
             db: { assets: [], activities: [], finances: [] },
             sha: null,
@@ -447,12 +439,112 @@
                 owner: localStorage.getItem('gh_owner')||'', 
                 repo: localStorage.getItem('gh_repo')||'', 
                 token: localStorage.getItem('gh_token')||'', 
+                gemini: localStorage.getItem('gemini_key')||'',
                 path: 'data/db_partner.json' 
             },
             ui: { multiSelect: false, selected: new Set() }
         };
 
-        // --- CORE APPLICATION ---
+        // --- AI MODULE (THE BRAIN) ---
+        const ai = {
+            // Prepare context from DB (Summarize to save tokens)
+            getContext: () => {
+                const summary = {
+                    total_assets: state.db.assets.length,
+                    broken_assets: state.db.assets.filter(a => a.cond === 'Rusak').map(a => `${a.cat} di ${a.loc} (${a.issue})`),
+                    overdue_maintenance: state.db.assets.filter(a => ut.isOverdue(a.service)).map(a => `${a.cat} di ${a.loc}`),
+                    recent_activities: state.db.activities.slice(0, 5).map(a => `${a.date}: ${a.title}`),
+                    finance_total: state.db.finances.reduce((acc, c) => acc + (c.cost || 0), 0)
+                };
+                return JSON.stringify(summary);
+            },
+
+            send: async () => {
+                const input = document.getElementById('ai-input');
+                const btn = document.getElementById('ai-send-btn');
+                const box = document.getElementById('ai-chat-box');
+                const question = input.value.trim();
+                
+                if (!question) return;
+                if (!state.config.gemini) return Swal.fire('Error', 'API Key Gemini belum diatur di Settings', 'warning');
+
+                // UI Update
+                input.value = '';
+                btn.disabled = true;
+                box.innerHTML += `<div class="chat-bubble chat-user">${question}</div>`;
+                box.innerHTML += `<div class="chat-bubble chat-ai" id="ai-loading"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Sedang menganalisa data...</div>`;
+                box.scrollTop = box.scrollHeight;
+
+                try {
+                    const context = ai.getContext();
+                    const prompt = `Anda adalah asisten manajer operasional teknis. Gunakan data JSON berikut sebagai konteks database saat ini: ${context}. \n\nPertanyaan user: "${question}". \n\nJawab dengan bahasa Indonesia yang profesional, ringkas, dan solutif. Jika perlu buat list atau poin-poin. Jangan sebutkan 'JSON' dalam jawaban.`;
+
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.config.gemini}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    });
+
+                    const data = await response.json();
+                    document.getElementById('ai-loading').remove();
+                    
+                    if(data.error) throw new Error(data.error.message);
+                    
+                    const answer = data.candidates[0].content.parts[0].text;
+                    const cleanAnswer = marked.parse(answer); // Render Markdown
+                    
+                    box.innerHTML += `<div class="chat-bubble chat-ai">${cleanAnswer}</div>`;
+
+                } catch (e) {
+                    document.getElementById('ai-loading').remove();
+                    box.innerHTML += `<div class="chat-bubble chat-ai text-red-500">Error: ${e.message}</div>`;
+                }
+                
+                box.scrollTop = box.scrollHeight;
+                btn.disabled = false;
+                input.focus();
+            },
+
+            diagnoseIssue: async () => {
+                if (!state.config.gemini) return Swal.fire('Error', 'Set Gemini API Key dulu', 'warning');
+                const issue = document.getElementById('asset-issue').value;
+                const type = document.querySelector('input[name="cat"]:checked').value;
+                
+                if(!issue) return Swal.fire('Info', 'Isi deskripsi kerusakan dulu', 'info');
+
+                const btn = document.getElementById('btn-diagnose');
+                const oldTxt = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Menganalisa...';
+                btn.disabled = true;
+
+                try {
+                    const prompt = `Sebagai teknisi ahli, berikan diagnosa singkat dan langkah perbaikan untuk ${type} dengan masalah: "${issue}". Jawab dalam poin-poin singkat.`;
+                    
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.config.gemini}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    });
+                    
+                    const data = await response.json();
+                    const diagnosis = data.candidates[0].content.parts[0].text;
+                    
+                    Swal.fire({
+                        title: 'Analisa AI',
+                        html: `<div class="text-left text-sm whitespace-pre-line">${diagnosis}</div>`,
+                        icon: 'info',
+                        width: '600px'
+                    });
+
+                } catch (e) {
+                    Swal.fire('Error', e.message, 'error');
+                }
+                btn.innerHTML = oldTxt;
+                btn.disabled = false;
+            }
+        };
+
+        // --- CORE APP ---
         const app = {
             init: () => {
                 if(state.config.token) app.syncData(); else ui.showSettings();
@@ -466,100 +558,48 @@
                 document.getElementById('report-end').value = endOfWeek;
             },
 
-            // --- SMART REPORT GENERATOR (NEW FEATURE) ---
+            // --- SMART REPORT ---
             generateSmartReport: () => {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
                 const now = dayjs().format('DD MMMM YYYY');
 
-                // 1. HEADER (Professional Look)
-                doc.setFillColor(15, 23, 42); // Primary Dark
-                doc.rect(0, 0, 210, 30, 'F');
-                doc.setTextColor(255, 255, 255);
-                doc.setFontSize(22);
-                doc.text("Laporan Status Aset & Maintenance", 105, 15, null, null, "center");
-                doc.setFontSize(10);
-                doc.text(`Dicetak pada: ${now}`, 105, 22, null, null, "center");
+                // Header
+                doc.setFillColor(15, 23, 42); doc.rect(0, 0, 210, 30, 'F');
+                doc.setTextColor(255); doc.setFontSize(20); doc.text("Laporan Operasional", 105, 15, null, null, "center");
+                doc.setFontSize(10); doc.text(now, 105, 22, null, null, "center");
 
-                // 2. EXECUTIVE SUMMARY (The "Boss" Section)
+                // Summary
                 const total = state.db.assets.length;
                 const rusak = state.db.assets.filter(a => a.cond === 'Rusak').length;
                 const overdue = state.db.assets.filter(a => ut.isOverdue(a.service)).length;
-                const acTotal = state.db.assets.filter(a => a.cat === 'AC').length;
-                
-                doc.setTextColor(0,0,0);
-                doc.setFontSize(14);
-                doc.text("Ringkasan Eksekutif", 14, 40);
-                
-                // Summary Box
-                doc.setDrawColor(200);
-                doc.setFillColor(245, 247, 250);
-                doc.roundedRect(14, 45, 180, 25, 3, 3, 'FD');
+
+                doc.setTextColor(0); doc.setFontSize(14); doc.text("Ringkasan Status", 14, 40);
+                doc.setFillColor(245); doc.roundedRect(14, 45, 180, 25, 3, 3, 'FD');
                 
                 doc.setFontSize(10);
                 doc.text(`Total Aset: ${total} Unit`, 20, 55);
-                doc.text(`Total AC: ${acTotal} Unit`, 20, 62);
-                
-                doc.setTextColor(220, 38, 38); // Red
-                doc.text(`Rusak Berat: ${rusak} Unit`, 80, 55);
-                
-                doc.setTextColor(245, 158, 11); // Orange
-                doc.text(`Perlu Servis (>3 Bulan): ${overdue} Unit`, 80, 62);
+                doc.setTextColor(220, 38, 38); doc.text(`Rusak: ${rusak}`, 80, 55);
+                doc.setTextColor(245, 158, 11); doc.text(`Overdue: ${overdue}`, 80, 62);
 
-                // 3. ACTION ITEMS (Recommendations)
-                let startY = 80;
-                if(rusak > 0 || overdue > 0) {
-                    doc.setTextColor(0,0,0);
-                    doc.setFontSize(12);
-                    doc.text("Prioritas Tindakan (Action Items)", 14, startY);
-                    
-                    const criticalItems = state.db.assets
-                        .filter(a => a.cond === 'Rusak' || ut.isOverdue(a.service))
-                        .map(a => [
-                            a.loc, 
-                            `${a.brand} ${a.model}`, 
-                            a.cond === 'Rusak' ? 'RUSAK' : 'TELAT SERVIS',
-                            a.service || 'Belum pernah',
-                            a.issue || '-'
-                        ]);
-
-                    doc.autoTable({
-                        startY: startY + 5,
-                        head: [['Lokasi', 'Unit', 'Status', 'Svc Terakhir', 'Masalah']],
-                        body: criticalItems,
-                        theme: 'grid',
-                        headStyles: { fillColor: [220, 38, 38] },
-                        styles: { fontSize: 8 },
-                        columnStyles: { 2: { fontStyle: 'bold', textColor: [255,0,0] } }
-                    });
-                    startY = doc.lastAutoTable.finalY + 15;
-                }
-
-                // 4. FULL INVENTORY LIST
-                doc.setFontSize(12);
-                doc.text("Daftar Inventaris Lengkap", 14, startY);
-                const allRows = state.db.assets.map((x,i) => [
-                    i+1, x.loc, x.cat, `${x.brand} ${x.model}`, x.cond, x.service || '-'
-                ]);
+                // Table
+                doc.setTextColor(0); doc.text("Detail Inventaris", 14, 80);
+                const rows = state.db.assets.map((x,i)=>[i+1, x.loc, x.cat, `${x.brand} ${x.model}`, x.cond, x.service||'-']);
                 
                 doc.autoTable({
-                    startY: startY + 5,
-                    head: [['No', 'Lokasi', 'Tipe', 'Merk/Model', 'Kondisi', 'Last Svc']],
-                    body: allRows,
+                    startY: 85,
+                    head: [['No', 'Lokasi', 'Tipe', 'Model', 'Kondisi', 'Last Svc']],
+                    body: rows,
                     theme: 'striped',
                     headStyles: { fillColor: [15, 23, 42] },
                     didParseCell: (data) => {
-                        if (data.column.index === 4 && data.cell.raw === 'Rusak') {
-                            data.cell.styles.textColor = [220, 38, 38];
-                            data.cell.styles.fontStyle = 'bold';
-                        }
+                        if (data.column.index === 4 && data.cell.raw === 'Rusak') data.cell.styles.textColor = [200, 0, 0];
                     }
                 });
-
-                doc.save(`Laporan_Aset_Eksekutif_${dayjs().format('YYYYMMDD')}.pdf`);
+                doc.save(`Laporan_TechPartner_${dayjs().format('YYYYMMDD')}.pdf`);
             },
 
-            // --- WORK REPORT (WITH PHOTOS) ---
+            // --- REPORT WITH PHOTOS ---
             downloadWorkReport: (type) => {
                 const activities = app.getFilteredActivities();
                 const s = document.getElementById('report-start').value;
@@ -600,9 +640,6 @@
                     const wb = XLSX.utils.book_new();
                     XLSX.utils.book_append_sheet(wb, ws, "Laporan");
                     XLSX.writeFile(wb, `Laporan_Kerja_${s}_${e}.xlsx`);
-                } else if (type === 'word') {
-                     // Word logic handled by library directly (simplified here)
-                     alert("Fitur Word sedang dioptimalkan. Gunakan PDF untuk hasil terbaik.");
                 }
             },
 
@@ -612,7 +649,7 @@
                 return state.db.activities.filter(a => dayjs(a.date).isAfter(dayjs(s).subtract(1,'day')) && dayjs(a.date).isBefore(dayjs(e).add(1,'day'))).sort((a,b)=>dayjs(a.date).diff(dayjs(b.date)));
             },
 
-            // --- CRUD OPS ---
+            // --- CRUD ---
             saveAsset: async (e) => {
                 e.preventDefault();
                 const id = document.getElementById('asset-id').value || ut.id();
@@ -633,7 +670,6 @@
                 if(idx >= 0) state.db.assets[idx] = item; else state.db.assets.push(item);
                 ui.closeModal('modal-asset'); app.renderAssets(); app.pushToGitHub(`Asset: ${item.loc}`);
             },
-
             saveActivity: async (e) => {
                 e.preventDefault();
                 const btn = e.target.querySelector('button[type="submit"]');
@@ -643,7 +679,6 @@
                 if(!state.db.activities) state.db.activities=[]; state.db.activities.unshift(item);
                 ui.closeModal('modal-activity'); app.renderActivities(); btn.innerText = oldTxt; btn.disabled = false; app.pushToGitHub(`Log: ${item.title}`);
             },
-
             saveFinance: async (e) => {
                 e.preventDefault();
                 const btn = e.target.querySelector('button[type="submit"]');
@@ -654,10 +689,24 @@
                 ui.closeModal('modal-finance'); app.renderFinance(); btn.innerText = oldTxt; btn.disabled = false; app.pushToGitHub(`Fin: ${item.item}`);
             },
 
-            // --- SYNC ENGINE ---
+            // --- CLOUD SYNC ---
+            saveSettings: () => {
+                state.config.owner = document.getElementById('conf-owner').value;
+                state.config.repo = document.getElementById('conf-repo').value;
+                state.config.token = document.getElementById('conf-token').value;
+                state.config.gemini = document.getElementById('conf-gemini').value;
+                
+                localStorage.setItem('gh_owner', state.config.owner);
+                localStorage.setItem('gh_repo', state.config.repo);
+                localStorage.setItem('gh_token', state.config.token);
+                localStorage.setItem('gemini_key', state.config.gemini);
+                
+                ui.closeModal('modal-settings'); app.syncData();
+            },
             syncData: async () => {
                 const {owner,repo,path,token} = state.config; if(!token) return;
                 const badge = document.getElementById('sync-badge');
+                badge.classList.add('animate-pulse', 'bg-yellow-400');
                 try {
                     const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, { headers: {'Authorization': `token ${token}`} });
                     if(res.ok) {
@@ -665,8 +714,11 @@
                         const data = JSON.parse(ut.b64Dec(json.content));
                         state.db = {...state.db, ...data};
                     } else if(res.status===404) { await app.pushToGitHub("Init DB"); }
+                    badge.classList.remove('bg-yellow-400', 'bg-red-500'); badge.classList.add('bg-success');
                     app.renderAssets(); app.renderActivities(); app.renderFinance();
-                } catch(e) { console.error(e); }
+                } catch(e) { 
+                    badge.classList.remove('bg-yellow-400'); badge.classList.add('bg-red-500'); 
+                }
             },
             pushToGitHub: async (msg) => {
                 const {owner,repo,path,token} = state.config;
@@ -675,14 +727,11 @@
                     await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, { method: 'PUT', headers: {'Authorization': `token ${token}`}, body: JSON.stringify(body) });
                 } catch(e) {}
             },
-            saveSettings: () => {
-                state.config.owner = document.getElementById('conf-owner').value;
-                state.config.repo = document.getElementById('conf-repo').value;
-                state.config.token = document.getElementById('conf-token').value;
-                localStorage.setItem('gh_owner', state.config.owner);
-                localStorage.setItem('gh_repo', state.config.repo);
-                localStorage.setItem('gh_token', state.config.token);
-                ui.closeModal('modal-settings'); app.syncData();
+            downloadExcel: () => {
+                 const wb = XLSX.utils.book_new();
+                 const ws1 = XLSX.utils.json_to_sheet(state.db.assets.map((x,i)=>({No:i+1, Loc:x.loc, Type:x.cat, Brand:x.brand, Cond:x.cond})));
+                 XLSX.utils.book_append_sheet(wb, ws1, "Assets");
+                 XLSX.writeFile(wb, "Backup_Data.xlsx");
             },
 
             // --- RENDERERS ---
@@ -691,7 +740,6 @@
                 const list = document.getElementById('asset-list');
                 const filtered = state.db.assets.filter(a => a.loc.toLowerCase().includes(term));
                 
-                // Stats Logic
                 const overdueCount = state.db.assets.filter(a => ut.isOverdue(a.service)).length;
                 document.getElementById('stat-total').innerText = state.db.assets.length;
                 document.getElementById('stat-overdue').innerText = overdueCount;
@@ -709,23 +757,15 @@
                         ${state.ui.multiSelect ? `<div class="absolute top-3 right-3"><input type="checkbox" ${isSel?'checked':''} class="w-5 h-5 accent-accent"></div>` : ''}
                         
                         <div class="flex justify-between items-start mb-3">
-                            <div class="bg-slate-100 p-2 rounded-lg text-slate-500">
-                                <i class="fa-solid ${a.cat==='AC'?'fa-wind':'fa-lightbulb'} text-xl"></i>
-                            </div>
+                            <div class="bg-slate-100 p-2 rounded-lg text-slate-500"><i class="fa-solid ${a.cat==='AC'?'fa-wind':'fa-lightbulb'} text-xl"></i></div>
                             ${isOverdue && a.cond === 'Normal' ? '<span class="px-2 py-1 bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded uppercase">Telat Servis</span>' : ''}
                             ${a.cond !== 'Normal' ? `<span class="px-2 py-1 rounded text-[10px] font-bold uppercase ${a.cond==='Rusak'?'bg-red-100 text-red-700':'bg-amber-100 text-amber-700'}">${a.cond}</span>` : ''}
                         </div>
                         
                         <h4 class="font-bold text-slate-800 text-lg leading-tight mb-1">${a.loc}</h4>
                         <p class="text-sm text-slate-500 mb-3">${a.brand || '-'} ${a.model || ''}</p>
-                        
                         ${a.issue ? `<div class="bg-red-50 text-red-600 text-xs p-2 rounded border border-red-100 mb-3"><i class="fa-solid fa-triangle-exclamation mr-1"></i> ${a.issue}</div>` : ''}
-
-                        <div class="flex items-center gap-2 text-xs text-slate-400 border-t pt-3">
-                            <i class="fa-regular fa-calendar-check"></i>
-                            <span>Servis: ${a.service ? dayjs(a.service).format('DD MMM YYYY') : 'Belum pernah'}</span>
-                        </div>
-                        
+                        <div class="flex items-center gap-2 text-xs text-slate-400 border-t pt-3"><i class="fa-regular fa-calendar-check"></i><span>Servis: ${a.service ? dayjs(a.service).format('DD MMM YYYY') : 'Belum pernah'}</span></div>
                         ${!state.ui.multiSelect ? `<button onclick="ui.editAsset('${a.id}')" class="absolute bottom-3 right-3 text-accent hover:text-blue-700"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
                     </div>`;
                 }).join('');
@@ -736,23 +776,15 @@
                 const acts = state.db.activities || [];
                 if(acts.length === 0) { document.getElementById('empty-activity').classList.remove('hidden'); list.innerHTML = ''; return; }
                 document.getElementById('empty-activity').classList.add('hidden');
-                
                 list.innerHTML = acts.map(a => `
                     <div class="relative pl-8 pb-8 border-l-2 border-slate-200 last:border-0 last:pb-0">
                         <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-white border-2 border-accent"></div>
                         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition">
-                            <div class="flex justify-between items-start mb-2">
-                                <div>
-                                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">${dayjs(a.date).format('DD MMM YYYY')} • ${a.time}</span>
-                                    <h4 class="font-bold text-slate-800 text-lg">${a.title}</h4>
-                                </div>
-                                <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded">${a.tag}</span>
-                            </div>
+                            <div class="flex justify-between items-start mb-2"><div><span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">${dayjs(a.date).format('DD MMM YYYY')} • ${a.time}</span><h4 class="font-bold text-slate-800 text-lg">${a.title}</h4></div><span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded">${a.tag}</span></div>
                             <p class="text-sm text-slate-600 whitespace-pre-line mb-3">${a.desc}</p>
                             ${a.img ? `<img src="${a.img}" class="h-24 rounded border cursor-pointer hover:opacity-90" onclick="window.open(this.src)">` : ''}
                         </div>
-                    </div>
-                `).join('');
+                    </div>`).join('');
             },
 
             renderFinance: () => {
@@ -762,57 +794,25 @@
                 document.getElementById('finance-total').innerText = ut.fmtRp(total);
                 if(fins.length === 0) { document.getElementById('empty-finance').classList.remove('hidden'); list.innerHTML = ''; return; }
                 document.getElementById('empty-finance').classList.add('hidden');
-
                 list.innerHTML = fins.map(f => `
                     <div class="bg-white p-4 rounded-xl border border-slate-200 flex gap-4 items-center shadow-sm">
-                        <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center flex-shrink-0">
-                            ${f.img ? `<img src="${f.img}" class="w-full h-full object-cover rounded-full cursor-pointer" onclick="window.open(this.src)">` : '<i class="fa-solid fa-receipt"></i>'}
-                        </div>
-                        <div class="flex-1">
-                            <div class="flex justify-between">
-                                <h4 class="font-bold text-slate-800">${f.item}</h4>
-                                <span class="font-mono font-bold text-emerald-600">${ut.fmtRp(f.cost)}</span>
-                            </div>
-                            <div class="text-xs text-slate-400">${dayjs(f.date).format('DD MMMM YYYY')}</div>
-                        </div>
-                    </div>
-                `).join('');
+                        <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center flex-shrink-0">${f.img ? `<img src="${f.img}" class="w-full h-full object-cover rounded-full cursor-pointer" onclick="window.open(this.src)">` : '<i class="fa-solid fa-receipt"></i>'}</div>
+                        <div class="flex-1"><div class="flex justify-between"><h4 class="font-bold text-slate-800">${f.item}</h4><span class="font-mono font-bold text-emerald-600">${ut.fmtRp(f.cost)}</span></div><div class="text-xs text-slate-400">${dayjs(f.date).format('DD MMMM YYYY')}</div></div>
+                    </div>`).join('');
             },
-
-            // --- BULK OPS ---
-            toggleSelect: (id) => {
-                if(state.ui.selected.has(id)) state.ui.selected.delete(id); else state.ui.selected.add(id);
-                app.renderAssets(); ui.updateBulkCount();
-            },
-            bulkDelete: async () => {
-                if(!confirm('Hapus item terpilih?')) return;
-                state.db.assets = state.db.assets.filter(a => !state.ui.selected.has(a.id));
-                ui.toggleMultiSelect(); app.renderAssets(); app.pushToGitHub('Bulk Delete');
-            },
-            bulkUpdateStatus: async (val) => {
-                state.db.assets.forEach(a => { if(state.ui.selected.has(a.id)) { a.cond = val; if(val==='Normal') a.issue=''; } });
-                ui.toggleMultiSelect(); app.renderAssets(); app.pushToGitHub('Bulk Status');
-            },
-            downloadExcel: () => {
-                 const wb = XLSX.utils.book_new();
-                 const ws1 = XLSX.utils.json_to_sheet(state.db.assets.map((x,i)=>({No:i+1, Loc:x.loc, Type:x.cat, Brand:x.brand, Cond:x.cond})));
-                 XLSX.utils.book_append_sheet(wb, ws1, "Assets");
-                 XLSX.writeFile(wb, "Backup_Data.xlsx");
-            }
+            
+            toggleSelect: (id) => { if(state.ui.selected.has(id)) state.ui.selected.delete(id); else state.ui.selected.add(id); app.renderAssets(); ui.updateBulkCount(); },
+            bulkDelete: async () => { if(!confirm('Hapus item terpilih?')) return; state.db.assets = state.db.assets.filter(a => !state.ui.selected.has(a.id)); ui.toggleMultiSelect(); app.renderAssets(); app.pushToGitHub('Bulk Delete'); },
+            bulkUpdateStatus: async (val) => { state.db.assets.forEach(a => { if(state.ui.selected.has(a.id)) { a.cond = val; if(val==='Normal') a.issue=''; } }); ui.toggleMultiSelect(); app.renderAssets(); app.pushToGitHub('Bulk Status'); }
         };
 
         const ui = {
             switchTab: (t) => {
-                ['assets','activity','finance'].forEach(x => {
-                    document.getElementById(`view-${x}`).classList.add('hidden');
-                    document.getElementById(`tab-${x}`).classList.remove('border-accent', 'text-primary');
-                    document.getElementById(`tab-${x}`).classList.add('border-transparent', 'text-slate-500');
-                });
-                document.getElementById(`view-${t}`).classList.remove('hidden');
-                document.getElementById(`tab-${t}`).classList.add('border-accent', 'text-primary');
-                document.getElementById(`tab-${t}`).classList.remove('border-transparent', 'text-slate-500');
+                ['assets','activity','finance'].forEach(x => { document.getElementById(`view-${x}`).classList.add('hidden'); document.getElementById(`tab-${x}`).classList.remove('border-accent', 'text-primary'); document.getElementById(`tab-${x}`).classList.add('border-transparent', 'text-slate-500'); });
+                document.getElementById(`view-${t}`).classList.remove('hidden'); document.getElementById(`tab-${t}`).classList.add('border-accent', 'text-primary'); document.getElementById(`tab-${t}`).classList.remove('border-transparent', 'text-slate-500');
             },
-            showAssetModal: () => { document.getElementById('assetForm').reset(); document.getElementById('asset-id').value=''; ui.toggleIssueField('Normal'); document.getElementById('modal-asset').classList.remove('hidden'); document.getElementById('modal-asset').classList.add('flex'); },
+            showAIModal: () => { document.getElementById('modal-ai').classList.remove('hidden'); document.getElementById('modal-ai').classList.add('flex'); setTimeout(() => document.getElementById('ai-input').focus(), 100); },
+            showAssetModal: () => { document.getElementById('assetForm').reset(); document.getElementById('asset-id').value=''; ui.toggleIssueField('Normal'); document.getElementById('modal-asset').classList.remove('hidden'); document.getElementById('modal-asset').classList.add('flex'); document.getElementById('btn-diagnose').classList.add('hidden'); },
             editAsset: (id) => {
                 const a = state.db.assets.find(x=>x.id===id); if(!a)return;
                 document.getElementById('asset-id').value=a.id;
@@ -820,28 +820,25 @@
                 document.getElementById('asset-loc').value=a.loc; document.getElementById('asset-brand').value=a.brand; document.getElementById('asset-model').value=a.model;
                 document.getElementById('asset-cond').value=a.cond; document.getElementById('asset-issue').value=a.issue;
                 document.getElementById('asset-install').value=a.install; document.getElementById('asset-service').value=a.service;
-                ui.toggleFormType(a.subtype); ui.toggleIssueField(a.cond); document.getElementById('modal-asset').classList.remove('hidden'); document.getElementById('modal-asset').classList.add('flex');
+                ui.toggleFormType(a.subtype); ui.toggleIssueField(a.cond); 
+                document.getElementById('modal-asset').classList.remove('hidden'); document.getElementById('modal-asset').classList.add('flex');
             },
             showActivityModal: () => { document.getElementById('modal-activity').classList.remove('hidden'); document.getElementById('modal-activity').classList.add('flex'); document.getElementById('act-time').value = dayjs().format('HH:mm'); },
             showFinanceModal: () => { document.getElementById('modal-finance').classList.remove('hidden'); document.getElementById('modal-finance').classList.add('flex'); document.getElementById('fin-date').value = dayjs().format('YYYY-MM-DD'); },
-            showSettings: () => { 
-                document.getElementById('conf-owner').value = state.config.owner; document.getElementById('conf-repo').value = state.config.repo; document.getElementById('conf-token').value = state.config.token;
-                document.getElementById('modal-settings').classList.remove('hidden'); document.getElementById('modal-settings').classList.add('flex'); 
-            },
+            showSettings: () => { document.getElementById('conf-owner').value = state.config.owner; document.getElementById('conf-repo').value = state.config.repo; document.getElementById('conf-token').value = state.config.token; document.getElementById('conf-gemini').value = state.config.gemini; document.getElementById('modal-settings').classList.remove('hidden'); document.getElementById('modal-settings').classList.add('flex'); },
             closeModal: (id) => { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); },
-            toggleFormType: (sel) => {
-                const cat = document.querySelector('input[name="cat"]:checked').value; const el = document.getElementById('asset-subtype'); el.innerHTML='';
-                (cat==='AC'?['Split','Cassette','Standing','Central']:['LED Bulb','TL','Downlight','Spotlight']).forEach(o=>{const op=document.createElement('option');op.text=o;op.value=o;if(sel===o)op.selected=true;el.add(op)});
-            },
-            toggleIssueField: (val) => document.getElementById('asset-issue').classList.toggle('hidden', val==='Normal'),
-            toggleMultiSelect: () => {
-                state.ui.multiSelect = !state.ui.multiSelect; state.ui.selected.clear();
-                const btn = document.getElementById('btn-multiselect'); 
-                document.getElementById('bulk-actions').classList.toggle('translate-y-full', !state.ui.multiSelect); 
-                app.renderAssets();
-            },
+            toggleFormType: (sel) => { const cat = document.querySelector('input[name="cat"]:checked').value; const el = document.getElementById('asset-subtype'); el.innerHTML=''; (cat==='AC'?['Split','Cassette','Standing','Central']:['LED Bulb','TL','Downlight','Spotlight']).forEach(o=>{const op=document.createElement('option');op.text=o;op.value=o;if(sel===o)op.selected=true;el.add(op)}); },
+            toggleIssueField: (val) => { document.getElementById('asset-issue').classList.toggle('hidden', val==='Normal'); document.getElementById('btn-diagnose').classList.toggle('hidden', val==='Normal' || !document.getElementById('asset-issue').value); },
+            toggleMultiSelect: () => { state.ui.multiSelect = !state.ui.multiSelect; state.ui.selected.clear(); document.getElementById('bulk-actions').classList.toggle('translate-y-full', !state.ui.multiSelect); app.renderAssets(); },
             updateBulkCount: () => document.getElementById('selected-count').innerText = state.ui.selected.size
         };
+
+        // Listen for issue input to show diagnose button
+        document.getElementById('asset-issue').addEventListener('input', (e) => {
+            const val = document.getElementById('asset-cond').value;
+            document.getElementById('btn-diagnose').classList.toggle('flex', val !== 'Normal' && e.target.value.length > 0);
+            document.getElementById('btn-diagnose').classList.toggle('hidden', val === 'Normal' || e.target.value.length === 0);
+        });
 
         document.addEventListener('DOMContentLoaded', app.init);
     </script>
