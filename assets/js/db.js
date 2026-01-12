@@ -1,33 +1,32 @@
 import { state } from './state.js';
+import { ut } from './utils.js';
 
 /**
  * db.js - Modul Koneksi Database (GitHub API)
  * Menangani sinkronisasi data (Pull/Push) ke repository GitHub.
- * Mengubah TechPartner 6.0 menjadi "Serverless App".
+ * Menggunakan helper dari utils.js untuk keamanan data Base64.
  */
 export const db = {
     // Helper URL
     url: () => `https://api.github.com/repos/${state.config.owner}/${state.config.repo}/contents/database.json`,
 
     // 1. SINKRONISASI (Pull dari Cloud)
-    // Dipanggil saat app.init() atau tombol Sync ditekan
     sync: async () => {
-        // Cek kelengkapan config
+        // Cek konfigurasi
         if (!state.config.owner || !state.config.repo || !state.config.token) {
-            return { status: 'error', message: 'Token/Repo belum disetting.' };
+            return { status: 'error', message: 'Konfigurasi GitHub belum lengkap.' };
         }
 
         try {
-            // Fetch data dari GitHub API
             const res = await fetch(db.url(), {
                 headers: { 
                     'Authorization': `token ${state.config.token}`,
                     'Accept': 'application/vnd.github.v3+json'
                 },
-                cache: 'no-store' // Anti-cache agar selalu dapat data terbaru
+                cache: 'no-store'
             });
 
-            // Jika file belum ada (404), kita buat baru nanti
+            // Jika file belum ada (404), inisialisasi baru
             if (res.status === 404) {
                 console.log("Database belum ada, inisialisasi baru...");
                 await db.push("Init Database TechPartner 6.0");
@@ -38,21 +37,20 @@ export const db = {
 
             const data = await res.json();
             
-            // Dekode konten Base64 dari GitHub (Support UTF-8/Emoji)
-            const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+            // GUNAKAN ut.b64Dec (Fungsi yang baru diperbaiki di utils.js)
+            // Ini mencegah error saat membaca karakter Emoji/UTF-8 dari GitHub
+            const content = JSON.parse(ut.b64Dec(data.content));
             
-            // PENTING: Simpan SHA (Checksum) untuk izin update berikutnya
+            // Simpan SHA untuk izin update berikutnya
             state.db.sha = data.sha;
             
-            // Update State Lokal dengan Data dari Cloud
-            // Kita gunakan teknik merge aman agar field lokal tidak tertimpa null
+            // Merge Data Cloud ke State Lokal
             state.db.meta = content.meta || state.db.meta;
             state.db.assets = content.assets || [];
             state.db.work_orders = content.work_orders || [];
             state.db.activities = content.activities || [];
             state.db.finances = content.finances || [];
             
-            // Update timestamp sync terakhir
             state.db.meta.last_sync = new Date().toISOString();
             
             return { status: 'success', message: 'Data tersinkronisasi.' };
@@ -64,16 +62,13 @@ export const db = {
     },
 
     // 2. PUSH (Simpan ke Cloud)
-    // Dipanggil setiap kali ada aksi (Simpan Aset, WO Selesai, dll)
     push: async (commitMsg = "Update Data") => {
-        // Jika tidak ada token, anggap mode offline (hanya simpan di memori)
         if (!state.config.token) {
             console.warn("Offline Mode: Data disimpan di memori browser saja.");
             return; 
         }
 
         try {
-            // Siapkan payload data
             const content = {
                 meta: state.db.meta,
                 assets: state.db.assets,
@@ -82,13 +77,13 @@ export const db = {
                 finances: state.db.finances
             };
 
-            // Encode ke Base64 (Handling karakter UTF-8/Emoji agar tidak error di GitHub)
-            const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2))));
+            // GUNAKAN ut.b64Enc (Encode aman)
+            const b64 = ut.b64Enc(JSON.stringify(content, null, 2));
             
             const payload = {
                 message: `TechPartner: ${commitMsg}`,
                 content: b64,
-                sha: state.db.sha // Wajib menyertakan SHA terakhir untuk update
+                sha: state.db.sha
             };
 
             const res = await fetch(db.url(), {
@@ -102,7 +97,7 @@ export const db = {
 
             if (res.ok) {
                 const data = await res.json();
-                state.db.sha = data.content.sha; // Update SHA baru untuk transaksi berikutnya
+                state.db.sha = data.content.sha; // Update SHA baru
                 console.log("Cloud Save OK:", commitMsg);
             } else {
                 console.warn("Cloud Save Failed:", res.status);
@@ -110,7 +105,6 @@ export const db = {
 
         } catch (err) {
             console.warn("Network Error during Save:", err);
-            // Di sini bisa ditambahkan logika antrean offline (Queue) untuk V2
         }
     }
 };
