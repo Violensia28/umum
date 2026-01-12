@@ -4,13 +4,17 @@ import { ui } from './ui.js';
 import { ut } from './utils.js';
 import { ai } from './modules/ai.js';
 import { wo } from './modules/wo.js';
-import { report } from './modules/report.js'; // IMPORT BARU: Module Laporan
-import { qr } from './modules/qr.js';         // IMPORT BARU: Module QR Code
+import { report } from './modules/report.js';
+import { qr } from './modules/qr.js';
 
+/**
+ * TechPartner 6.0 - Main Application Controller
+ * Menghubungkan logika bisnis (Modules) dengan antarmuka (UI)
+ */
 const app = {
     // --- 1. INITIALIZATION ---
     init: async () => {
-        // Set tanggal filter laporan default (Minggu ini)
+        // A. Setup filter tanggal default untuk laporan
         const s = dayjs().startOf('week').add(1,'day').format('YYYY-MM-DD');
         const e = dayjs().endOf('week').add(1,'day').format('YYYY-MM-DD');
         const startEl = document.getElementById('report-start');
@@ -18,26 +22,30 @@ const app = {
         if(startEl) startEl.value = s;
         if(endEl) endEl.value = e;
 
-        // Cek Koneksi Cloud (GitHub)
+        // B. Sinkronisasi Awal dengan Cloud
         if(state.config.token) {
             const res = await db.sync();
-            if(res.status === 'success') console.log("Cloud Sync Success");
+            if(res.status === 'success') {
+                console.log("Cloud Database Terhubung.");
+            }
         } else {
-            ui.showModal('modal-settings'); // Minta token jika belum ada
+            // Jika token kosong, paksa buka pengaturan
+            ui.showModal('modal-settings');
         }
 
-        // Jalankan Migrasi Data (jika update dari versi lama)
+        // C. Jalankan Migrasi Struktur Data
         state.initMigration();
         
-        // Render Semua Tampilan
-        ui.renderAssets();
-        ui.renderWO();
-        ui.renderActivities();
-        ui.renderFinance();
+        // D. Tampilkan Dashboard Utama (Default Tab Tahap 4)
+        ui.switchTab('dashboard');
+        
+        // E. Inisialisasi Dropdown Master Data
+        ui.populateLocationSelect();
+        ui.populateTypeSelect();
+        ui.populateAssetSelectForWO();
     },
 
     // --- 2. WORK ORDER ACTIONS ---
-    
     showWOModal: () => {
         document.getElementById('woForm').reset();
         ui.populateAssetSelectForWO();
@@ -59,18 +67,19 @@ const app = {
         ui.closeModal('modal-wo');
         ui.renderWO();
         ui.switchTab('wo');
-        Swal.fire('Sukses', 'Tiket Work Order dibuat.', 'success');
+        Swal.fire('Sukses', 'Tiket Work Order berhasil diterbitkan.', 'success');
     },
 
     updateWOStatus: (id, status) => {
         wo.updateStatus(id, status);
         ui.renderWO();
+        // Update dashboard karena status WO berubah
+        ui.renderDashboard();
     },
     
     showFinishWOModal: (id) => {
-        state.ui.currentWOId = id; // Simpan ID sementara
+        state.ui.currentWOId = id;
         document.getElementById('wo-finish-notes').value = '';
-        document.getElementById('wo-finish-photo').value = ''; // Reset input file
         ui.showModal('modal-finish-wo');
     },
     
@@ -81,83 +90,23 @@ const app = {
         
         if(!notes) return Swal.fire('Info', 'Mohon isi catatan penyelesaian.', 'warning');
 
-        // Handle Upload Bukti Foto (Before/After)
+        // Handle foto bukti jika ada
         const fileInput = document.getElementById('wo-finish-photo');
         if(fileInput && fileInput.files.length > 0) {
-            // Simpan sebagai foto 'after'
             await wo.addPhoto(id, 'after', fileInput.files[0]);
         }
 
-        // Update status DONE & Trigger Logic PM
         wo.updateStatus(id, 'DONE', notes);
         
         ui.closeModal('modal-finish-wo');
         ui.renderWO();
-        ui.renderAssets(); // Update karena tanggal servis aset berubah
-        Swal.fire('Selesai', 'Pekerjaan selesai & Data aset terupdate.', 'success');
-    },
-
-    // --- 3. QR CODE ACTIONS (BARU) ---
-    showQR: (id) => qr.show(id),
-    printQR: () => qr.print(),
-
-    // --- 4. BACKUP & RESTORE (BARU) ---
-    backupData: () => {
-        // Buat file JSON dari state.db
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.db));
-        const downloadAnchorNode = document.createElement('a');
-        const fileName = `TechPartner_Backup_${dayjs().format('YYYY-MM-DD_HHmm')}.json`;
+        ui.renderAssets();
+        ui.renderDashboard(); // Refresh statistik dashboard
         
-        downloadAnchorNode.setAttribute("href", dataStr);
-        downloadAnchorNode.setAttribute("download", fileName);
-        document.body.appendChild(downloadAnchorNode);
-        downloadAnchorNode.click();
-        downloadAnchorNode.remove();
+        Swal.fire('Selesai', 'Pekerjaan ditutup. Data aset telah diperbarui.', 'success');
     },
 
-    restoreData: (input) => {
-        if (!input.files[0]) return;
-        
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const json = JSON.parse(e.target.result);
-                
-                // Validasi sederhana
-                if(!json.meta || !json.assets) throw new Error("Format file salah");
-
-                Swal.fire({
-                    title: 'Restore Data?',
-                    text: "Data saat ini akan ditimpa dengan data backup! Pastikan Anda yakin.",
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#3085d6',
-                    cancelButtonColor: '#d33',
-                    confirmButtonText: 'Ya, Restore!'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        state.db = json;
-                        state.initMigration(); // Pastikan struktur data sesuai versi terbaru
-                        app.syncData(); // Langsung sync ke cloud agar aman
-                        
-                        Swal.fire('Berhasil!', 'Data telah dipulihkan.', 'success')
-                        .then(() => location.reload());
-                    }
-                });
-
-            } catch(err) {
-                Swal.fire('Error', 'File Backup Rusak atau Tidak Valid.', 'error');
-            }
-        };
-        reader.readAsText(input.files[0]);
-    },
-
-    // --- 5. REPORT ACTIONS (BARU) ---
-    downloadAssetReport: () => report.assetPDF(),
-    downloadWorkReport: () => report.woPDF(),
-    downloadFinanceReport: () => report.financePDF(),
-
-    // --- 6. STANDARD ASSET ACTIONS ---
+    // --- 3. ASSET ACTIONS ---
     showAssetModal: () => { 
         document.getElementById('assetForm').reset(); 
         document.getElementById('asset-id').value = ''; 
@@ -204,41 +153,20 @@ const app = {
         
         ui.closeModal('modal-asset'); 
         ui.renderAssets(); 
+        ui.renderDashboard(); // Update chart kondisi aset
+        
         const locName = state.getLocationName(item.location_id); 
-        db.push(`Asset: ${locName}`); 
+        db.push(`Asset Update: ${locName}`); 
     },
 
-    // --- 7. BULK ACTIONS ---
-    toggleSelect: (id) => { 
-        if(state.ui.selected.has(id)) state.ui.selected.delete(id); 
-        else state.ui.selected.add(id); 
-        ui.renderAssets(); 
-        ui.updateBulkCount(); 
-    },
+    // --- 4. QR & REPORT ACTIONS ---
+    showQR: (id) => qr.show(id),
+    printQR: () => qr.print(),
+    downloadAssetReport: () => report.assetPDF(),
+    downloadWorkReport: () => report.woPDF(),
+    downloadFinanceReport: () => report.financePDF(),
 
-    bulkDelete: async () => { 
-        if(!confirm(`Hapus ${state.ui.selected.size} item terpilih?`)) return; 
-        state.db.assets = state.db.assets.filter(a => !state.ui.selected.has(a.id)); 
-        state.ui.multiSelect = false; 
-        ui.renderAssets(); 
-        document.getElementById('bulk-actions').classList.add('translate-y-full'); 
-        db.push('Bulk Del'); 
-    },
-
-    bulkUpdateStatus: async (val) => { 
-        state.db.assets.forEach(a => { 
-            if(state.ui.selected.has(a.id)) { 
-                a.cond = val; 
-                if(val==='Normal') a.issue=''; 
-            } 
-        }); 
-        state.ui.multiSelect = false; 
-        ui.renderAssets(); 
-        document.getElementById('bulk-actions').classList.add('translate-y-full'); 
-        db.push('Bulk Upd'); 
-    },
-
-    // --- 8. ACTIVITY & FINANCE ---
+    // --- 5. LOG & FINANCE ---
     saveActivity: async (e) => { 
         e.preventDefault(); 
         const btn = e.target.querySelector('button[type="submit"]'); 
@@ -257,7 +185,7 @@ const app = {
         ui.closeModal('modal-activity'); 
         ui.renderActivities(); 
         btn.innerText="Simpan Log"; btn.disabled=false; 
-        db.push(`Log: ${item.title}`); 
+        db.push(`Activity: ${item.title}`); 
     },
 
     saveFinance: async (e) => { 
@@ -275,11 +203,12 @@ const app = {
         state.db.finances.unshift(item); 
         ui.closeModal('modal-finance'); 
         ui.renderFinance(); 
+        ui.renderDashboard(); // Update angka pengeluaran di dashboard
         btn.innerText="Simpan"; btn.disabled=false; 
-        db.push(`Fin: ${item.item}`); 
+        db.push(`Finance: ${item.item}`); 
     },
 
-    // --- 9. SYNC & SETTINGS ---
+    // --- 6. SYSTEM & CLOUD ---
     syncData: async () => {
         const badge = document.getElementById('sync-badge');
         badge.classList.remove('bg-success', 'bg-danger');
@@ -290,11 +219,11 @@ const app = {
         badge.classList.remove('bg-warning', 'animate-pulse');
         if(res.status === 'success') {
             badge.classList.add('bg-success');
-            ui.renderAssets(); 
-            ui.renderWO(); 
-            ui.renderActivities(); 
-            ui.renderFinance();
-            Swal.fire({ icon: 'success', title: 'Data Terupdate', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
+            // Refresh tampilan tab yang sedang aktif
+            const activeTab = document.querySelector('.tab-nav button.border-accent').id.replace('tab-', '');
+            ui.switchTab(activeTab);
+            
+            Swal.fire({ icon: 'success', title: 'Data Cloud Sinkron', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
         } else {
             badge.classList.add('bg-danger');
             Swal.fire('Sync Error', res.message, 'error');
@@ -314,16 +243,42 @@ const app = {
         
         ui.closeModal('modal-settings');
         app.syncData();
+    },
+
+    backupData: () => {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.db));
+        const dl = document.createElement('a');
+        dl.setAttribute("href", dataStr);
+        dl.setAttribute("download", `TechPartner_Backup_${dayjs().format('YYYYMMDD')}.json`);
+        dl.click();
+    },
+
+    restoreData: (input) => {
+        if (!input.files[0]) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const json = JSON.parse(e.target.result);
+                if(confirm("Tindakan ini akan menghapus data lokal dan menimpanya dengan backup. Lanjutkan?")) {
+                    state.db = json;
+                    app.syncData();
+                    location.reload();
+                }
+            } catch(err) {
+                Swal.fire('Error', 'File backup tidak valid.', 'error');
+            }
+        };
+        reader.readAsText(input.files[0]);
     }
 };
 
-// Expose ke Window agar onclick di HTML bisa akses 'app.xxx'
+// Expose app ke window agar event onclick di HTML bisa memanggil app.xxx
 window.app = app;
 window.ui = ui;
 window.ut = ut;
 window.ai = ai;
 
-// Mulai Aplikasi
+// Mulai inisialisasi saat DOM siap
 document.addEventListener('DOMContentLoaded', app.init);
 
 export { app };
