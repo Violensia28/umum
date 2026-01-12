@@ -3,34 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="TechPartner 6.0: Asset Management System">
+    <meta name="description" content="TechPartner 6.0: Sistem Manajemen Aset & Pemeliharaan Terpadu">
     <title>TechPartner 6.0: Ultimate Operations</title>
     
+    <!-- PWA & Mobile Optimization -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f172a">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/900/900782.png">
 
-    <!-- LIBRARIES -->
+    <!-- CSS & ICONS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- JS LIBRARIES (CDN) -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.7/dayjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.7/locale/id.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     
-    <!-- EXPORT ENGINES -->
+    <!-- ENGINES: PDF & QR CODE -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
-    <script src="https://unpkg.com/docx@7.1.0/build/index.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
     <script>
         dayjs.locale('id'); 
         tailwind.config = {
             theme: { 
                 extend: { 
-                    colors: { primary: '#0f172a', accent: '#2563eb', ai: '#7c3aed', success: '#059669', danger: '#dc2626', warning: '#d97706' },
+                    colors: { 
+                        primary: '#0f172a', 
+                        accent: '#2563eb', 
+                        ai: '#7c3aed', 
+                        success: '#059669', 
+                        danger: '#dc2626', 
+                        warning: '#d97706' 
+                    },
                     animation: { 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
                 } 
             }
@@ -39,21 +47,26 @@
     <style>
         body { font-family: 'Segoe UI', Inter, sans-serif; background-color: #f1f5f9; color: #334155; }
         .asset-card { transition: all 0.2s; border-left: 4px solid transparent; }
-        .asset-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.1); }
+        .asset-card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
         .asset-card.selected { border: 2px solid #2563eb; background-color: #eff6ff; }
+        
+        /* Status Color Coding */
         .status-normal { border-left-color: #059669; }
         .status-servis { border-left-color: #d97706; }
         .status-rusak { border-left-color: #dc2626; }
         .status-overdue { border-left-color: #7c3aed; background-color: #f5f3ff; }
-        .chat-bubble { padding: 10px 15px; border-radius: 12px; max-width: 85%; margin-bottom: 10px; font-size: 0.9rem; }
-        .chat-user { background: #2563eb; color: white; align-self: flex-end; border-bottom-right-radius: 2px; margin-left: auto; }
-        .chat-ai { background: white; border: 1px solid #e2e8f0; align-self: flex-start; border-bottom-left-radius: 2px; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
         @media print {
             @page { size: A4; margin: 10mm; }
             body { background: white; -webkit-print-color-adjust: exact; }
             nav, .no-print, .tab-nav, #bulk-actions, #ai-float-btn { display: none !important; }
             #view-assets, #view-wo, #view-activity, #view-finance { display: block !important; margin-bottom: 40px; page-break-after: always; }
-            .grid-cols-1 { grid-template-columns: repeat(2, 1fr) !important; }
         }
     </style>
 </head>
@@ -72,166 +85,263 @@
         </div>
         
         <div class="flex gap-3 items-center">
+            <!-- Desktop AI Button -->
             <button onclick="ui.showModal('modal-ai')" class="hidden md:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-ai to-indigo-600 rounded-full hover:shadow-lg hover:shadow-violet-500/30 transition border border-white/10 group">
-                <i class="fa-solid fa-robot text-white group-hover:animate-bounce"></i><span class="text-xs font-bold">Asisten AI</span>
+                <i class="fa-solid fa-robot text-white group-hover:animate-bounce"></i>
+                <span class="text-xs font-bold">Asisten AI</span>
             </button>
             <div class="h-8 w-px bg-slate-700 mx-2"></div>
-            <button onclick="app.syncData()" class="group relative px-3 py-2 rounded-lg hover:bg-slate-800 transition" title="Sync Cloud">
-                <div id="sync-badge" class="w-2 h-2 bg-success rounded-full absolute top-2 right-2"></div><i class="fa-solid fa-cloud text-slate-400 group-hover:text-white"></i>
+            <!-- Sync Indicator -->
+            <button onclick="app.syncData()" class="group relative px-3 py-2 rounded-lg hover:bg-slate-800 transition" title="Sinkronisasi Cloud">
+                <div id="sync-badge" class="w-2 h-2 bg-success rounded-full absolute top-2 right-2"></div>
+                <i class="fa-solid fa-cloud text-slate-400 group-hover:text-white"></i>
             </button>
-            <button onclick="ui.showModal('modal-settings')" class="p-2 rounded-lg hover:bg-slate-800 transition text-slate-400 hover:text-white"><i class="fa-solid fa-gear text-lg"></i></button>
+            <!-- Settings -->
+            <button onclick="ui.showModal('modal-settings')" class="p-2 rounded-lg hover:bg-slate-800 transition text-slate-400 hover:text-white" title="Pengaturan">
+                <i class="fa-solid fa-gear text-lg"></i>
+            </button>
         </div>
     </nav>
 
-    <!-- TABS -->
-    <div class="bg-white border-b px-6 flex gap-8 text-sm overflow-x-auto tab-nav no-print shadow-sm z-20">
-        <button onclick="ui.switchTab('assets')" id="tab-assets" class="py-4 border-b-2 border-accent text-primary font-bold flex items-center gap-2 transition hover:bg-slate-50 px-4"><i class="fa-solid fa-boxes-stacked"></i> Aset</button>
-        <!-- NEW WO TAB -->
-        <button onclick="ui.switchTab('wo')" id="tab-wo" class="py-4 border-b-2 border-transparent text-slate-500 font-medium flex items-center gap-2 transition hover:text-slate-800 hover:bg-slate-50 px-4"><i class="fa-solid fa-screwdriver-wrench"></i> Work Order</button>
-        <button onclick="ui.switchTab('activity')" id="tab-activity" class="py-4 border-b-2 border-transparent text-slate-500 font-medium flex items-center gap-2 transition hover:text-slate-800 hover:bg-slate-50 px-4"><i class="fa-solid fa-list-check"></i> Laporan</button>
-        <button onclick="ui.switchTab('finance')" id="tab-finance" class="py-4 border-b-2 border-transparent text-slate-500 font-medium flex items-center gap-2 transition hover:text-slate-800 hover:bg-slate-50 px-4"><i class="fa-solid fa-file-invoice-dollar"></i> Keuangan</button>
+    <!-- NAVIGATION TABS -->
+    <div class="bg-white border-b px-6 flex gap-4 md:gap-8 text-sm overflow-x-auto tab-nav no-print shadow-sm z-20">
+        <button onclick="ui.switchTab('assets')" id="tab-assets" class="py-4 border-b-2 border-accent text-primary font-bold flex items-center gap-2 transition hover:bg-slate-50 px-4 whitespace-nowrap"><i class="fa-solid fa-boxes-stacked"></i> Inventaris Aset</button>
+        <button onclick="ui.switchTab('wo')" id="tab-wo" class="py-4 border-b-2 border-transparent text-slate-500 font-medium flex items-center gap-2 transition hover:text-slate-800 hover:bg-slate-50 px-4 whitespace-nowrap"><i class="fa-solid fa-screwdriver-wrench"></i> Work Order</button>
+        <button onclick="ui.switchTab('activity')" id="tab-activity" class="py-4 border-b-2 border-transparent text-slate-500 font-medium flex items-center gap-2 transition hover:text-slate-800 hover:bg-slate-50 px-4 whitespace-nowrap"><i class="fa-solid fa-list-check"></i> Laporan Kerja</button>
+        <button onclick="ui.switchTab('finance')" id="tab-finance" class="py-4 border-b-2 border-transparent text-slate-500 font-medium flex items-center gap-2 transition hover:text-slate-800 hover:bg-slate-50 px-4 whitespace-nowrap"><i class="fa-solid fa-file-invoice-dollar"></i> Keuangan</button>
     </div>
 
-    <!-- MAIN CONTENT -->
-    <main class="flex-1 overflow-y-auto p-6 bg-slate-50 relative scroll-smooth">
+    <!-- MAIN VIEWS -->
+    <main class="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-50 relative scroll-smooth">
         
-        <!-- VIEW 1: ASSETS -->
+        <!-- ================= VIEW 1: ASSETS ================= -->
         <div id="view-assets" class="block max-w-7xl mx-auto">
             <div class="flex flex-col md:flex-row gap-4 mb-6 sticky top-0 bg-slate-50/95 backdrop-blur z-10 py-3 no-print items-center">
                 <div class="relative flex-1 w-full">
                     <i class="fa-solid fa-search absolute left-4 top-3.5 text-slate-400"></i>
-                    <input type="text" id="searchAsset" onkeyup="ui.renderAssets()" placeholder="Cari aset (Lokasi, Merk, Masalah)..." class="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition">
+                    <input type="text" id="searchAsset" onkeyup="ui.renderAssets()" placeholder="Cari lokasi, merk, atau masalah..." class="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition">
                 </div>
                 <div class="flex gap-2 w-full md:w-auto">
-                    <button onclick="app.showAssetModal()" class="px-5 py-2 bg-accent text-white rounded-xl text-sm font-bold hover:bg-blue-600 shadow-lg transition"><i class="fa-solid fa-plus mr-2"></i> Tambah</button>
+                    <button onclick="app.downloadAssetReport()" class="px-4 py-2 bg-white text-red-600 border border-red-100 rounded-xl hover:bg-red-50 text-xs font-bold shadow-sm transition flex items-center gap-2" title="Ekspor PDF">
+                        <i class="fa-solid fa-file-pdf"></i> <span class="hidden md:inline">PDF</span>
+                    </button>
+                    <button onclick="app.showAssetModal()" class="flex-1 md:flex-none px-6 py-2 bg-accent text-white rounded-xl text-sm font-bold hover:bg-blue-600 shadow-lg transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Tambah Aset
+                    </button>
                 </div>
             </div>
-            <!-- STATS -->
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-                <div class="bg-white p-4 rounded-2xl border shadow-sm"><div class="text-[10px] text-slate-400 font-bold uppercase">Total Aset</div><div class="text-3xl font-black text-slate-800" id="stat-total">0</div></div>
-                <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 shadow-sm relative"><div class="text-[10px] text-indigo-500 font-bold uppercase">Telat Servis</div><div class="text-3xl font-black text-indigo-600" id="stat-overdue">0</div><i class="fa-solid fa-clock-rotate-left absolute right-3 bottom-3 text-indigo-200 text-3xl"></i></div>
-                <div class="bg-white p-4 rounded-2xl border-b-4 border-success shadow-sm"><div class="text-[10px] text-slate-400 font-bold uppercase">Normal</div><div class="text-3xl font-black text-success" id="stat-normal">0</div></div>
-                <div class="bg-white p-4 rounded-2xl border-b-4 border-danger shadow-sm"><div class="text-[10px] text-slate-400 font-bold uppercase">Rusak</div><div class="text-3xl font-black text-danger" id="stat-issue">0</div></div>
-                <div class="bg-white p-4 rounded-2xl border-b-4 border-warning shadow-sm"><div class="text-[10px] text-slate-400 font-bold uppercase">Perlu Servis</div><div class="text-3xl font-black text-warning" id="stat-maintenance">0</div></div>
+
+            <!-- DASHBOARD STATS -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-6">
+                <div class="bg-white p-4 rounded-2xl border shadow-sm"><div class="text-[10px] text-slate-400 font-bold uppercase">Total Aset</div><div class="text-2xl md:text-3xl font-black text-slate-800" id="stat-total">0</div></div>
+                <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 shadow-sm relative overflow-hidden"><div class="text-[10px] text-indigo-500 font-bold uppercase">Telat Servis</div><div class="text-2xl md:text-3xl font-black text-indigo-600" id="stat-overdue">0</div><i class="fa-solid fa-clock-rotate-left absolute -right-2 -bottom-2 text-indigo-200/50 text-4xl"></i></div>
+                <div class="bg-white p-4 rounded-2xl border-b-4 border-success shadow-sm"><div class="text-[10px] text-slate-400 font-bold uppercase">Normal</div><div class="text-2xl md:text-3xl font-black text-success" id="stat-normal">0</div></div>
+                <div class="bg-white p-4 rounded-2xl border-b-4 border-danger shadow-sm"><div class="text-[10px] text-slate-400 font-bold uppercase">Rusak</div><div class="text-2xl md:text-3xl font-black text-danger" id="stat-issue">0</div></div>
+                <div class="bg-white p-4 rounded-2xl border-b-4 border-warning shadow-sm"><div class="text-[10px] text-slate-400 font-bold uppercase">Maintenance</div><div class="text-2xl md:text-3xl font-black text-warning" id="stat-maintenance">0</div></div>
             </div>
+
             <div id="asset-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-20"></div>
         </div>
 
-        <!-- VIEW 2: WORK ORDER (NEW) -->
+        <!-- ================= VIEW 2: WORK ORDER ================= -->
         <div id="view-wo" class="hidden max-w-5xl mx-auto pb-20">
             <div class="flex justify-between items-center mb-6">
-                <div><h2 class="text-2xl font-black text-slate-800">Work Orders</h2><p class="text-xs text-slate-500">Manajemen Tugas & Perbaikan</p></div>
-                <button onclick="app.showWOModal()" class="px-5 py-2 bg-primary text-white rounded-xl text-sm font-bold shadow-lg hover:bg-slate-700 transition"><i class="fa-solid fa-plus mr-2"></i> Buat WO</button>
+                <div>
+                    <h2 class="text-2xl font-black text-slate-800">Manajemen Work Order</h2>
+                    <p class="text-xs text-slate-500">Pelacakan perbaikan & pemeliharaan berkala</p>
+                </div>
+                <button onclick="app.showWOModal()" class="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-bold shadow-lg hover:bg-slate-700 transition flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> Buat Tiket WO
+                </button>
             </div>
-            <!-- WO Filter -->
-            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6 flex gap-3 overflow-x-auto">
-                <button onclick="ui.filterWO('All')" class="px-4 py-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-bold hover:bg-slate-200">Semua</button>
-                <button onclick="ui.filterWO('OPEN')" class="px-4 py-1.5 rounded-full bg-blue-50 text-blue-600 text-xs font-bold hover:bg-blue-100">Open</button>
-                <button onclick="ui.filterWO('PROGRESS')" class="px-4 py-1.5 rounded-full bg-yellow-50 text-yellow-600 text-xs font-bold hover:bg-yellow-100">Progress</button>
-                <button onclick="ui.filterWO('DONE')" class="px-4 py-1.5 rounded-full bg-green-50 text-green-600 text-xs font-bold hover:bg-green-100">Selesai</button>
-            </div>
-            <div id="wo-list" class="space-y-4"></div>
+            
+            <div id="wo-list" class="grid grid-cols-1 gap-4"></div>
         </div>
 
-        <!-- VIEW 3: ACTIVITY -->
+        <!-- ================= VIEW 3: ACTIVITY ================= -->
         <div id="view-activity" class="hidden max-w-5xl mx-auto pb-20">
             <div class="flex justify-between items-center mb-6 no-print">
-                <div><h2 class="text-2xl font-black text-slate-800">Laporan Kinerja</h2><p class="text-xs text-slate-500">Log Harian</p></div>
-                <button onclick="ui.showModal('modal-activity')" class="px-5 py-2.5 bg-accent text-white rounded-xl text-sm font-bold shadow-lg hover:bg-blue-600 transition"><i class="fa-solid fa-pen-nib mr-2"></i> Input</button>
+                <div>
+                    <h2 class="text-2xl font-black text-slate-800">Laporan Kinerja</h2>
+                    <p class="text-xs text-slate-500">Log aktivitas harian tim operasional</p>
+                </div>
+                <button onclick="ui.showModal('modal-activity')" class="px-5 py-2.5 bg-accent text-white rounded-xl text-sm font-bold shadow-lg hover:bg-blue-600 transition flex items-center gap-2">
+                    <i class="fa-solid fa-pen-nib"></i> Input Log
+                </button>
             </div>
+            
+            <!-- Filters -->
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-8 no-print flex flex-col md:flex-row gap-4 items-center justify-between">
-                <div class="flex gap-2 w-full">
-                    <input type="date" id="report-start" class="border p-2 rounded-lg text-sm flex-1">
-                    <input type="date" id="report-end" class="border p-2 rounded-lg text-sm flex-1">
-                </div>
                 <div class="flex gap-2 w-full md:w-auto">
-                    <button onclick="app.downloadWorkReport('pdf')" class="flex-1 px-4 py-2 bg-red-50 text-red-600 border border-red-100 rounded-lg font-bold text-xs"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+                    <div class="flex-1 md:w-40"><label class="text-[10px] font-bold text-slate-400 block mb-1">Dari</label><input type="date" id="report-start" class="w-full border p-2 rounded-lg text-sm bg-slate-50"></div>
+                    <div class="flex-1 md:w-40"><label class="text-[10px] font-bold text-slate-400 block mb-1">Sampai</label><input type="date" id="report-end" class="w-full border p-2 rounded-lg text-sm bg-slate-50"></div>
+                </div>
+                <div class="flex gap-2 w-full md:w-auto self-end">
+                    <button onclick="app.downloadWorkReport()" class="flex-1 md:flex-none px-6 py-2 bg-red-50 text-red-600 border border-red-100 rounded-xl font-bold hover:bg-red-100 transition text-xs flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-file-pdf"></i> PDF Laporan Kerja
+                    </button>
                 </div>
             </div>
+
             <div class="relative pl-6 space-y-8" id="activity-list"></div>
-            <div id="empty-activity" class="hidden text-center py-12 text-slate-400">Belum ada data kegiatan.</div>
+            <div id="empty-activity" class="hidden text-center py-20 text-slate-400">
+                <i class="fa-solid fa-calendar-day text-5xl mb-4 opacity-20"></i>
+                <p>Belum ada aktivitas yang dicatat periode ini.</p>
+            </div>
         </div>
 
-        <!-- VIEW 4: FINANCE -->
+        <!-- ================= VIEW 4: FINANCE ================= -->
         <div id="view-finance" class="hidden max-w-4xl mx-auto pb-20">
             <div class="bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl p-8 text-white shadow-xl mb-8 relative overflow-hidden">
                 <div class="relative z-10 flex flex-col md:flex-row justify-between items-end gap-6">
-                    <div><p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">Total Pengeluaran (YTD)</p><h2 class="text-4xl md:text-5xl font-black tracking-tight" id="finance-total">Rp 0</h2></div>
-                    <button onclick="ui.showModal('modal-finance')" class="bg-white text-slate-900 px-5 py-2 rounded-xl text-sm font-bold shadow hover:bg-slate-100 transition"><i class="fa-solid fa-plus mr-2"></i> Input Bon</button>
+                    <div>
+                        <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">Total Pengeluaran (YTD)</p>
+                        <h2 class="text-4xl md:text-5xl font-black tracking-tight" id="finance-total">Rp 0</h2>
+                    </div>
+                    <div class="flex gap-2 w-full md:w-auto">
+                        <button onclick="app.downloadFinanceReport()" class="bg-white/10 text-white hover:bg-white/20 px-4 py-2.5 rounded-xl transition flex-1 md:flex-none" title="Export PDF">
+                            <i class="fa-solid fa-file-pdf"></i>
+                        </button>
+                        <button onclick="ui.showModal('modal-finance')" class="bg-white text-slate-900 px-6 py-2.5 rounded-xl text-sm font-bold shadow hover:bg-slate-100 transition flex-1 md:flex-none flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-plus"></i> Input Bon
+                        </button>
+                    </div>
                 </div>
+                <!-- Background Decorative Icon -->
+                <i class="fa-solid fa-money-bill-trend-up absolute -right-4 -bottom-4 text-white/5 text-9xl"></i>
             </div>
-            <h3 class="font-bold text-slate-700 mb-4 pl-1 border-l-4 border-accent ml-1">Riwayat Pembelian</h3>
+            
+            <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2">
+                <span class="w-1.5 h-6 bg-accent rounded-full"></span>
+                Riwayat Belanja & Sparepart
+            </h3>
             <div id="finance-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-            <div id="empty-finance" class="hidden text-center py-12 text-slate-400">Belum ada data.</div>
+            <div id="empty-finance" class="hidden text-center py-20 text-slate-400">Belum ada data pengeluaran.</div>
         </div>
     </main>
 
-    <!-- FLOATING AI -->
-    <button id="ai-float-btn" onclick="ui.showModal('modal-ai')" class="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-ai to-indigo-600 text-white rounded-full shadow-2xl z-50 flex items-center justify-center animate-bounce-slow border-2 border-white/20"><i class="fa-solid fa-robot text-2xl"></i></button>
+    <!-- FLOATING AI BUTTON (Mobile Only) -->
+    <button id="ai-float-btn" onclick="ui.showModal('modal-ai')" class="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-ai to-indigo-600 text-white rounded-full shadow-2xl z-40 flex items-center justify-center animate-bounce-slow border-2 border-white/20">
+        <i class="fa-solid fa-robot text-2xl"></i>
+    </button>
 
-    <!-- BULK ACTIONS BAR -->
-    <div id="bulk-actions" class="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-lg z-40 transform translate-y-full transition-transform duration-300 flex justify-between items-center no-print">
-        <div class="font-bold text-slate-700"><span class="bg-slate-100 px-3 py-1 rounded text-sm mr-2" id="selected-count">0</span>Item Dipilih</div>
+    <!-- BULK ACTIONS TOOLBAR -->
+    <div id="bulk-actions" class="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-2xl z-40 transform translate-y-full transition-transform duration-300 flex justify-between items-center no-print">
+        <div class="font-bold text-slate-700 flex items-center gap-3">
+            <span class="bg-slate-100 text-accent px-4 py-1.5 rounded-lg text-sm font-mono" id="selected-count">0</span> 
+            <span class="hidden md:inline">Item Terpilih</span>
+        </div>
         <div class="flex gap-2">
-            <button onclick="app.bulkDelete()" class="px-4 py-2 bg-red-50 text-red-600 rounded-lg text-xs font-bold border border-red-100">Hapus</button>
-            <button onclick="app.bulkUpdateStatus('Perlu Servis')" class="px-4 py-2 bg-warning/10 text-warning rounded-lg text-xs font-bold border border-warning/20">Mark Servis</button>
-            <button onclick="app.bulkUpdateStatus('Normal')" class="px-4 py-2 bg-success text-white rounded-lg text-xs font-bold shadow-lg">Mark Normal</button>
+            <button onclick="app.bulkDelete()" class="px-4 py-2 bg-red-50 text-red-600 rounded-lg text-xs font-bold border border-red-100 hover:bg-red-100 transition">Hapus</button>
+            <button onclick="app.bulkUpdateStatus('Perlu Servis')" class="px-4 py-2 bg-warning/10 text-warning rounded-lg text-xs font-bold border border-warning/20 hover:bg-warning/20 transition">Mark Servis</button>
+            <button onclick="app.bulkUpdateStatus('Normal')" class="px-4 py-2 bg-success text-white rounded-lg text-xs font-bold shadow-lg hover:bg-emerald-600 transition">Mark Normal</button>
         </div>
     </div>
 
-    <!-- MODALS -->
+    <!-- ================== MODALS SECTION ================== -->
 
-    <!-- WO MODAL (NEW) -->
+    <!-- QR CODE MODAL -->
+    <div id="modal-qr" class="fixed inset-0 bg-slate-900/60 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xs text-center overflow-hidden transform transition-all scale-100">
+            <div class="p-5 bg-slate-50 border-b flex justify-between items-center">
+                <h3 class="font-bold text-slate-800">Label QR Aset</h3>
+                <button onclick="ui.closeModal('modal-qr')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <div id="qr-print-area" class="p-8 flex flex-col items-center justify-center bg-white">
+                <div id="qr-canvas" class="p-3 border-2 border-slate-100 rounded-xl bg-white shadow-inner"></div>
+                <h4 id="qr-title" class="font-bold text-slate-800 mt-5 text-lg leading-tight"></h4>
+                <p id="qr-subtitle" class="text-[10px] text-slate-400 uppercase tracking-widest mt-1"></p>
+            </div>
+            <div class="p-4 border-t bg-slate-50 flex gap-2">
+                <button onclick="app.printQR()" class="flex-1 py-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-700 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-print"></i> Cetak
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- WORK ORDER FORM MODAL -->
     <div id="modal-wo" class="fixed inset-0 bg-slate-900/60 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[95vh]">
-            <div class="p-5 border-b flex justify-between items-center bg-slate-50 rounded-t-2xl"><h3 class="font-bold text-lg text-slate-800">Buat Work Order</h3><button onclick="ui.closeModal('modal-wo')" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-times text-xl"></i></button></div>
+            <div class="p-5 border-b flex justify-between items-center bg-slate-50 rounded-t-2xl">
+                <h3 class="font-bold text-lg text-slate-800">Buat Work Order Baru</h3>
+                <button onclick="ui.closeModal('modal-wo')" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
             <div class="p-6 overflow-y-auto">
                 <form id="woForm" onsubmit="app.saveWO(event)">
                     <div class="space-y-4">
                         <div>
-                            <label class="text-[10px] font-bold uppercase text-slate-400 mb-1">Pilih Aset</label>
-                            <select id="wo-asset-id" class="w-full border p-2 rounded-lg text-sm bg-slate-50 outline-none" required></select>
+                            <label class="text-[10px] font-bold uppercase text-slate-400 mb-1 block">Aset Terkait</label>
+                            <select id="wo-asset-id" class="w-full border p-3 rounded-xl text-sm bg-slate-50 outline-none focus:border-accent" required>
+                                <option value="">Pilih Aset...</option>
+                            </select>
                         </div>
                         <div>
-                            <label class="text-[10px] font-bold uppercase text-slate-400 mb-1">Judul Pekerjaan</label>
-                            <input id="wo-title" class="w-full border p-2 rounded-lg text-sm font-bold" placeholder="Cth: Perbaikan AC Bocor" required>
+                            <label class="text-[10px] font-bold uppercase text-slate-400 mb-1 block">Judul Pekerjaan</label>
+                            <input id="wo-title" class="w-full border p-3 rounded-xl text-sm font-bold" placeholder="Cth: Perbaikan AC Bocor" required>
                         </div>
                         <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <label class="text-[10px] font-bold uppercase text-slate-400 mb-1">Prioritas</label>
-                                <select id="wo-priority" class="w-full border p-2 rounded-lg text-sm bg-white">
-                                    <option value="Low">Low (Biasa)</option>
-                                    <option value="Med" selected>Medium</option>
-                                    <option value="High">High (Penting)</option>
-                                    <option value="Critical">Critical (Darurat)</option>
+                                <label class="text-[10px] font-bold uppercase text-slate-400 mb-1 block">Prioritas</label>
+                                <select id="wo-priority" class="w-full border p-3 rounded-xl text-sm bg-white outline-none">
+                                    <option value="Low">Biasa (Low)</option>
+                                    <option value="Med" selected>Normal (Med)</option>
+                                    <option value="High">Penting (High)</option>
+                                    <option value="Critical">Darurat (Critical)</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="text-[10px] font-bold uppercase text-slate-400 mb-1">Tipe</label>
-                                <select id="wo-type" class="w-full border p-2 rounded-lg text-sm bg-white">
+                                <label class="text-[10px] font-bold uppercase text-slate-400 mb-1 block">Jenis Tugas</label>
+                                <select id="wo-type" class="w-full border p-3 rounded-xl text-sm bg-white outline-none">
                                     <option value="Repair">Perbaikan</option>
                                     <option value="Maintenance">Maintenance Rutin</option>
                                     <option value="Installation">Instalasi Baru</option>
                                 </select>
                             </div>
                         </div>
-                        <textarea id="wo-desc" class="w-full border p-3 rounded-lg text-sm h-24 outline-none" placeholder="Deskripsi awal..."></textarea>
+                        <div>
+                            <label class="text-[10px] font-bold uppercase text-slate-400 mb-1 block">Deskripsi Masalah</label>
+                            <textarea id="wo-desc" class="w-full border p-3 rounded-xl text-sm h-28 outline-none focus:border-accent" placeholder="Jelaskan detail pekerjaan atau masalah yang ditemukan..."></textarea>
+                        </div>
                     </div>
-                    <button type="submit" class="w-full bg-primary text-white py-3 mt-6 rounded-xl font-bold hover:bg-slate-800 transition">Buat Tiket</button>
+                    <button type="submit" class="w-full bg-primary text-white py-4 mt-6 rounded-2xl font-bold hover:bg-slate-800 shadow-xl transition transform active:scale-95">
+                        Kirim Perintah Kerja
+                    </button>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- FINISH WO MODAL (NEW) -->
+    <!-- FINISH WORK ORDER MODAL -->
     <div id="modal-finish-wo" class="fixed inset-0 bg-slate-900/60 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[95vh]">
-            <div class="p-5 border-b flex justify-between items-center bg-green-50 rounded-t-2xl"><h3 class="font-bold text-lg text-green-800">Selesaikan Pekerjaan</h3><button onclick="ui.closeModal('modal-finish-wo')" class="text-green-400 hover:text-green-600"><i class="fa-solid fa-times text-xl"></i></button></div>
+            <div class="p-5 border-b flex justify-between items-center bg-emerald-50 rounded-t-2xl">
+                <h3 class="font-bold text-lg text-emerald-800">Selesaikan Pekerjaan</h3>
+                <button onclick="ui.closeModal('modal-finish-wo')" class="text-emerald-400 hover:text-emerald-600"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
             <div class="p-6 overflow-y-auto">
                 <form onsubmit="app.finishWO(event)">
-                    <p class="text-sm text-slate-600 mb-4">Pastikan pekerjaan sudah selesai. Aset terkait akan otomatis diupdate tanggal servisnya.</p>
-                    <textarea id="wo-finish-notes" class="w-full border p-3 rounded-lg text-sm h-32 outline-none mb-4 focus:border-green-500" placeholder="Catatan penyelesaian (Apa yang diperbaiki?)..." required></textarea>
-                    <button type="submit" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition">Selesai & Tutup Tiket</button>
+                    <p class="text-sm text-slate-600 mb-5 leading-relaxed">Pastikan pekerjaan telah diverifikasi di lapangan. Status aset dan jadwal servis berikutnya akan diperbarui secara otomatis.</p>
+                    
+                    <div class="mb-5">
+                        <label class="block text-[10px] font-bold uppercase text-slate-400 mb-2">Upload Bukti Foto</label>
+                        <div class="relative border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:border-emerald-300 transition group">
+                            <input type="file" id="wo-finish-photo" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer">
+                            <div class="text-slate-400 group-hover:text-emerald-600">
+                                <i class="fa-solid fa-camera text-2xl mb-1"></i>
+                                <div class="text-[10px] font-bold">KLIK ATAU DRAG FOTO</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-5">
+                        <label class="block text-[10px] font-bold uppercase text-slate-400 mb-2">Catatan Teknisi</label>
+                        <textarea id="wo-finish-notes" class="w-full border p-4 rounded-xl text-sm h-32 outline-none focus:border-emerald-500 bg-slate-50" placeholder="Jelaskan tindakan yang telah dilakukan (Sparepart yang diganti, dsb)..." required></textarea>
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-emerald-600 text-white py-4 rounded-2xl font-bold hover:bg-emerald-700 shadow-xl shadow-emerald-500/20 transition transform active:scale-95">
+                        Submit & Tutup Tiket
+                    </button>
                 </form>
             </div>
         </div>
@@ -240,36 +350,171 @@
     <!-- ASSET MODAL -->
     <div id="modal-asset" class="fixed inset-0 bg-slate-900/60 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[95vh]">
-            <div class="p-5 border-b flex justify-between items-center bg-slate-50 rounded-t-2xl"><h3 class="font-bold text-lg text-slate-800">Data Aset</h3><button onclick="ui.closeModal('modal-asset')" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-times text-xl"></i></button></div>
+            <div class="p-5 border-b flex justify-between items-center bg-slate-50 rounded-t-2xl">
+                <h3 class="font-bold text-lg text-slate-800">Form Data Aset</h3>
+                <button onclick="ui.closeModal('modal-asset')" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
             <div class="p-6 overflow-y-auto">
                 <form id="assetForm" onsubmit="app.saveAsset(event)">
                     <input type="hidden" id="asset-id">
                     <div class="space-y-4">
                         <div class="grid grid-cols-2 gap-3">
-                            <div><label class="text-[10px] font-bold uppercase text-slate-400 mb-1">Lokasi</label><select id="asset-location" class="w-full border p-2 rounded-lg text-sm bg-slate-50 outline-none" required><option value="">Loading...</option></select></div>
-                            <div><label class="text-[10px] font-bold uppercase text-slate-400 mb-1">Tipe Aset</label><select id="asset-type" class="w-full border p-2 rounded-lg text-sm bg-slate-50 outline-none" required><option value="">Loading...</option></select></div>
+                            <div><label class="text-[10px] font-bold uppercase text-slate-400 mb-1 block">Lokasi</label><select id="asset-location" class="w-full border p-3 rounded-xl text-sm bg-slate-50 outline-none focus:border-accent" required><option value="">Pilih...</option></select></div>
+                            <div><label class="text-[10px] font-bold uppercase text-slate-400 mb-1 block">Tipe Aset</label><select id="asset-type" class="w-full border p-3 rounded-xl text-sm bg-slate-50 outline-none focus:border-accent" required><option value="">Pilih...</option></select></div>
                         </div>
-                        <div class="flex gap-3"><input id="asset-brand" class="w-1/2 border p-3 rounded-lg text-sm outline-none" placeholder="Merk"><input id="asset-model" class="w-1/2 border p-3 rounded-lg text-sm outline-none" placeholder="Model/PK"></div>
-                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                            <label class="text-[10px] font-bold uppercase text-slate-400 mb-2 block">Kondisi</label>
-                            <select id="asset-cond" class="w-full border p-2.5 rounded-lg text-sm mb-2 outline-none" onchange="ui.toggleIssueField(this.value)"><option value="Normal">✅ Normal</option><option value="Perlu Servis">⚠️ Perlu Servis</option><option value="Rusak">❌ Rusak</option></select>
-                            <div id="issue-container" class="hidden"><textarea id="asset-issue" class="w-full border p-3 rounded-lg text-sm h-24 outline-none bg-white mb-2" placeholder="Jelaskan kerusakan..."></textarea><button type="button" onclick="ai.diagnoseIssue()" class="w-full py-2 bg-gradient-to-r from-ai to-purple-600 text-white rounded-lg text-xs font-bold hover:shadow-lg transition flex items-center justify-center gap-2 group"><i class="fa-solid fa-wand-magic-sparkles group-hover:animate-spin"></i> Cek Solusi via AI</button></div>
+                        <div class="flex gap-3">
+                            <div class="w-1/2"><label class="text-[10px] font-bold uppercase text-slate-400 mb-1 block">Merk</label><input id="asset-brand" class="w-full border p-3 rounded-xl text-sm outline-none" placeholder="Cth: Panasonic"></div>
+                            <div class="w-1/2"><label class="text-[10px] font-bold uppercase text-slate-400 mb-1 block">Model / PK</label><input id="asset-model" class="w-full border p-3 rounded-xl text-sm outline-none" placeholder="Cth: 1.5 PK"></div>
                         </div>
-                        <div class="grid grid-cols-2 gap-3"><div><label class="text-[10px] font-bold uppercase text-slate-400">Tgl Pasang</label><input type="date" id="asset-install" class="w-full border p-2 rounded-lg text-sm text-slate-600"></div><div><label class="text-[10px] font-bold uppercase text-slate-400">Servis Terakhir</label><input type="date" id="asset-service" class="w-full border p-2 rounded-lg text-sm text-slate-600"></div></div>
+                        
+                        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                            <label class="text-[10px] font-bold uppercase text-slate-400 mb-2 block">Status Kondisi</label>
+                            <select id="asset-cond" class="w-full border p-3 rounded-xl text-sm mb-3 outline-none" onchange="ui.toggleIssueField(this.value)">
+                                <option value="Normal">✅ Normal / Baik</option>
+                                <option value="Perlu Servis">⚠️ Perlu Servis</option>
+                                <option value="Rusak">❌ Rusak / Eror</option>
+                            </select>
+                            <div id="issue-container" class="hidden animate-pulse">
+                                <textarea id="asset-issue" class="w-full border p-3 rounded-xl text-sm h-24 outline-none bg-white mb-2" placeholder="Detail kerusakan..."></textarea>
+                                <button type="button" onclick="ai.diagnoseIssue()" class="w-full py-2.5 bg-gradient-to-r from-ai to-purple-600 text-white rounded-xl text-xs font-bold hover:shadow-lg transition flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i> Analisa Solusi via AI
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div><label class="text-[10px] font-bold uppercase text-slate-400 block mb-1">Tgl Instalasi</label><input type="date" id="asset-install" class="w-full border p-3 rounded-xl text-sm text-slate-600 bg-slate-50"></div>
+                            <div><label class="text-[10px] font-bold uppercase text-slate-400 block mb-1">Last Service</label><input type="date" id="asset-service" class="w-full border p-3 rounded-xl text-sm text-slate-600 bg-slate-50"></div>
+                        </div>
                     </div>
-                    <button type="submit" class="w-full bg-accent text-white py-3 mt-6 rounded-xl font-bold hover:bg-blue-600 shadow-lg transition">Simpan Data</button>
+                    <button type="submit" class="w-full bg-accent text-white py-4 mt-6 rounded-2xl font-bold hover:bg-blue-600 shadow-xl transition transform active:scale-95">
+                        Simpan Perubahan
+                    </button>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- OTHER MODALS (AI, ACTIVITY, FINANCE, SETTINGS) SAME AS BEFORE -->
-    <div id="modal-ai" class="fixed inset-0 bg-slate-900/80 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print"><div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col h-[80vh] overflow-hidden border border-white/20"><div class="bg-gradient-to-r from-ai to-indigo-700 p-4 flex justify-between items-center text-white"><div class="flex items-center gap-3"><div class="bg-white/20 p-2 rounded-lg"><i class="fa-solid fa-robot text-xl"></i></div><div><h3 class="font-bold text-lg leading-none">AI Consultant</h3><p class="text-[10px] text-violet-200 opacity-80">Powered by Gemini</p></div></div><button onclick="ui.closeModal('modal-ai')" class="text-white/60 hover:text-white"><i class="fa-solid fa-times text-xl"></i></button></div><div id="ai-chat-box" class="flex-1 overflow-y-auto p-5 bg-slate-50 font-sans"><div class="chat-bubble chat-ai">Halo! Saya siap membantu analisa data maintenance Anda.</div></div><div class="p-4 bg-white border-t border-slate-200"><div class="flex gap-2"><input type="text" id="ai-input" class="flex-1 border border-slate-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-ai outline-none" placeholder="Tanya sesuatu..." onkeypress="if(event.key==='Enter') ai.send()"><button onclick="ai.send()" id="ai-send-btn" class="bg-ai text-white px-5 rounded-xl hover:bg-violet-700 transition"><i class="fa-solid fa-paper-plane"></i></button></div></div></div></div>
-    <div id="modal-activity" class="fixed inset-0 bg-slate-900/60 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print"><div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]"><div class="p-5 border-b flex justify-between items-center bg-slate-50 rounded-t-2xl"><h3 class="font-bold text-lg text-slate-800">Catat Kegiatan</h3><button onclick="ui.closeModal('modal-activity')" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-times text-xl"></i></button></div><div class="p-6 overflow-y-auto"><form onsubmit="app.saveActivity(event)"><div class="space-y-4"><input id="act-title" class="w-full border p-3 rounded-lg font-bold outline-none" placeholder="Judul Kegiatan" required><div class="flex gap-3"><input type="time" id="act-time" class="w-1/3 border p-3 rounded-lg text-sm" required><select id="act-tag" class="w-full border p-3 rounded-lg text-sm bg-white"><option value="Umum">Umum</option><option value="IT">IT Support</option><option value="GA">Maintenance GA</option><option value="Servis">Servis Rutin</option></select></div><textarea id="act-desc" class="w-full border p-3 rounded-lg text-sm h-24 outline-none" placeholder="Deskripsi"></textarea><div class="bg-slate-50 p-4 rounded-xl border border-dashed border-slate-300 text-center"><input type="file" id="act-photo" accept="image/*" class="hidden" onchange="ut.previewImage(this, 'act-preview')"><label for="act-photo" class="inline-block px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold cursor-pointer hover:bg-slate-100">Tambah Foto</label><img id="act-preview" class="hidden img-preview mt-3 rounded-lg border mx-auto max-h-40"></div></div><button type="submit" class="w-full bg-slate-800 text-white py-3 mt-6 rounded-xl font-bold hover:bg-slate-700 transition">Simpan Log</button></form></div></div></div>
-    <div id="modal-finance" class="fixed inset-0 bg-slate-900/60 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print"><div class="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh]"><div class="p-5 border-b flex justify-between items-center bg-emerald-50 rounded-t-2xl"><h3 class="font-bold text-lg text-emerald-800">Input Pengeluaran</h3><button onclick="ui.closeModal('modal-finance')" class="text-emerald-400 hover:text-emerald-600"><i class="fa-solid fa-times text-xl"></i></button></div><div class="p-6 overflow-y-auto"><form onsubmit="app.saveFinance(event)"><div class="space-y-4"><input id="fin-item" class="w-full border border-slate-300 p-3 rounded-lg font-bold outline-none" placeholder="Nama Barang" required><div class="relative"><span class="absolute left-3 top-3 text-slate-400 font-bold">Rp</span><input type="number" id="fin-cost" class="w-full border border-slate-300 p-3 pl-10 rounded-lg text-lg font-mono font-bold text-emerald-600 outline-none" placeholder="0" required></div><input type="date" id="fin-date" class="w-full border p-3 rounded-lg text-sm" required><div class="bg-emerald-50/50 p-4 rounded-xl border border-dashed border-emerald-200 text-center"><input type="file" id="fin-photo" accept="image/*" class="hidden" onchange="ut.previewImage(this, 'fin-preview')"><label for="fin-photo" class="inline-block px-4 py-2 bg-white border border-emerald-100 rounded-lg text-sm font-bold text-emerald-600 cursor-pointer hover:bg-emerald-50">Upload Foto Bon/Nota</label><img id="fin-preview" class="hidden img-preview mt-3 rounded-lg border mx-auto max-h-40"></div></div><button type="submit" class="w-full bg-emerald-600 text-white py-3 mt-6 rounded-xl font-bold hover:bg-emerald-700 transition">Simpan</button></form></div></div></div>
-    <div id="modal-settings" class="fixed inset-0 bg-slate-900/80 hidden z-50 items-center justify-center p-4 no-print"><div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"><div class="bg-slate-900 text-white p-5"><h3 class="font-bold text-lg">Pengaturan</h3><p class="text-xs text-slate-400">Konfigurasi Cloud & AI</p></div><div class="p-6 space-y-4 overflow-y-auto max-h-[70vh]"><div><label class="text-[10px] font-bold text-slate-400 uppercase">GitHub</label><input id="conf-owner" class="w-full border p-2 text-xs mb-1" placeholder="Username"><input id="conf-repo" class="w-full border p-2 text-xs mb-1" placeholder="Repo"><input type="password" id="conf-token" class="w-full border p-2 text-xs" placeholder="Token"></div><div><label class="text-[10px] font-bold text-ai uppercase">Gemini AI</label><input type="password" id="conf-gemini" class="w-full border border-violet-200 bg-violet-50 p-2 text-xs" placeholder="API Key"></div><button onclick="app.saveSettings()" class="w-full bg-accent text-white py-2 rounded-lg text-sm font-bold">Simpan</button><button onclick="ui.closeModal('modal-settings')" class="w-full py-2 text-slate-400 text-xs">Tutup</button></div></div></div>
+    <!-- SETTINGS MODAL (WITH BACKUP/RESTORE) -->
+    <div id="modal-settings" class="fixed inset-0 bg-slate-900/80 hidden z-50 items-center justify-center p-4 no-print backdrop-blur-md">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all">
+            <div class="bg-slate-900 text-white p-6 relative">
+                <h3 class="font-bold text-lg">Konfigurasi Sistem</h3>
+                <p class="text-xs text-slate-400">Pengaturan Cloud, AI, dan Backup</p>
+                <button onclick="ui.closeModal('modal-settings')" class="absolute top-6 right-6 text-slate-500 hover:text-white"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            <div class="p-6 space-y-5 overflow-y-auto max-h-[70vh]">
+                <div class="space-y-3">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2"><i class="fa-brands fa-github text-sm"></i> GitHub Database</label>
+                    <input id="conf-owner" class="w-full border-b p-2 text-xs outline-none focus:border-accent transition" placeholder="Username GitHub">
+                    <input id="conf-repo" class="w-full border-b p-2 text-xs outline-none focus:border-accent transition" placeholder="Nama Repository">
+                    <input type="password" id="conf-token" class="w-full border-b p-2 text-xs outline-none focus:border-accent transition" placeholder="Personal Access Token">
+                </div>
+                
+                <div class="space-y-3 pt-2">
+                    <label class="text-[10px] font-bold text-ai uppercase tracking-widest flex items-center gap-2"><i class="fa-solid fa-brain text-sm"></i> Gemini AI Engine</label>
+                    <input type="password" id="conf-gemini" class="w-full border-b border-violet-100 p-2 text-xs outline-none focus:border-ai transition bg-violet-50/30" placeholder="API Key Gemini">
+                </div>
 
-    <script>if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').then(reg => console.log('SW Registered:', reg.scope)).catch(err => console.log('SW Error:', err)); }); }</script>
+                <div class="pt-4 space-y-3">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Keamanan Data (Offline)</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="app.backupData()" class="py-2.5 bg-slate-100 text-slate-700 rounded-xl text-[10px] font-bold hover:bg-slate-200 transition flex items-center justify-center gap-2 border border-slate-200">
+                            <i class="fa-solid fa-download"></i> BACKUP JSON
+                        </button>
+                        <label class="py-2.5 bg-slate-100 text-slate-700 rounded-xl text-[10px] font-bold hover:bg-slate-200 transition flex items-center justify-center gap-2 border border-slate-200 cursor-pointer">
+                            <i class="fa-solid fa-upload"></i> RESTORE
+                            <input type="file" class="hidden" onchange="app.restoreData(this)" accept=".json">
+                        </label>
+                    </div>
+                </div>
+
+                <button onclick="app.saveSettings()" class="w-full bg-accent text-white py-3.5 rounded-2xl font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-600 transition mt-4">
+                    Terapkan & Simpan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL AI CHAT, ACTIVITY & FINANCE (Ringkas) -->
+    <div id="modal-ai" class="fixed inset-0 bg-slate-900/85 hidden z-50 items-center justify-center p-4 backdrop-blur-md no-print">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col h-[85vh] overflow-hidden">
+            <div class="bg-gradient-to-r from-ai to-indigo-800 p-5 flex justify-between items-center text-white">
+                <div class="flex items-center gap-3">
+                    <div class="bg-white/20 p-2 rounded-lg animate-pulse-slow"><i class="fa-solid fa-robot text-xl"></i></div>
+                    <div><h3 class="font-bold text-lg leading-none">AI Consultant</h3><p class="text-[10px] text-violet-200 opacity-70">TechPartner Intelligence System</p></div>
+                </div>
+                <button onclick="ui.closeModal('modal-ai')" class="text-white/60 hover:text-white transition"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            <div id="ai-chat-box" class="flex-1 overflow-y-auto p-5 bg-slate-50 space-y-4">
+                <div class="chat-bubble chat-ai shadow-sm">Halo! Saya asisten AI Anda. Tanyakan status aset, strategi pemeliharaan, atau mintalah ringkasan laporan hari ini.</div>
+            </div>
+            <div class="p-4 bg-white border-t">
+                <div class="flex gap-2">
+                    <input type="text" id="ai-input" class="flex-1 border border-slate-200 rounded-2xl px-5 py-3 outline-none focus:ring-2 focus:ring-ai/30 transition shadow-inner" placeholder="Ketik pertanyaan Anda..." onkeypress="if(event.key==='Enter') ai.send()">
+                    <button onclick="ai.send()" id="ai-send-btn" class="bg-ai text-white px-6 rounded-2xl hover:bg-violet-700 transition shadow-lg"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-activity" class="fixed inset-0 bg-slate-900/60 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
+            <div class="p-5 border-b flex justify-between items-center bg-slate-50 rounded-t-2xl"><h3 class="font-bold text-lg text-slate-800">Catat Log Kegiatan</h3><button onclick="ui.closeModal('modal-activity')" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-times text-xl"></i></button></div>
+            <div class="p-6 overflow-y-auto">
+                <form onsubmit="app.saveActivity(event)">
+                    <div class="space-y-4">
+                        <input id="act-title" class="w-full border p-4 rounded-xl font-bold outline-none focus:border-accent" placeholder="Judul Kegiatan (Cth: Servis AC Ruang 101)" required>
+                        <div class="flex gap-3">
+                            <input type="time" id="act-time" class="w-1/3 border p-3 rounded-xl text-sm" required>
+                            <select id="act-tag" class="w-full border p-3 rounded-xl text-sm bg-white"><option value="Umum">Umum</option><option value="IT Support">IT Support</option><option value="Maintenance GA">Maintenance GA</option><option value="Pembangunan">Pembangunan/Renov</option></select>
+                        </div>
+                        <textarea id="act-desc" class="w-full border p-4 rounded-xl text-sm h-32 outline-none focus:border-accent" placeholder="Detail pekerjaan yang dilakukan..."></textarea>
+                        <div class="bg-slate-50 p-6 rounded-2xl border border-dashed border-slate-300 text-center relative hover:bg-slate-100 transition">
+                            <input type="file" id="act-photo" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" onchange="ut.previewImage(this, 'act-preview')">
+                            <label for="act-photo" class="text-slate-500 text-xs font-bold cursor-pointer"><i class="fa-solid fa-image text-2xl mb-2 block"></i> KLIK UNTUK LAMPIRAN FOTO</label>
+                            <img id="act-preview" class="hidden img-preview mt-4 rounded-xl border mx-auto max-h-48 shadow-md">
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-slate-800 text-white py-4 mt-6 rounded-2xl font-bold hover:bg-slate-700 shadow-xl transition">Simpan Log Aktivitas</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-finance" class="fixed inset-0 bg-slate-900/60 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh]">
+            <div class="p-5 border-b flex justify-between items-center bg-emerald-50 rounded-t-2xl"><h3 class="font-bold text-lg text-emerald-800">Catat Pengeluaran (Bon)</h3><button onclick="ui.closeModal('modal-finance')" class="text-emerald-400 hover:text-emerald-600"><i class="fa-solid fa-times text-xl"></i></button></div>
+            <div class="p-6 overflow-y-auto">
+                <form onsubmit="app.saveFinance(event)">
+                    <div class="space-y-4">
+                        <input id="fin-item" class="w-full border border-slate-200 p-4 rounded-xl font-bold outline-none focus:border-emerald-500" placeholder="Nama Barang / Jasa" required>
+                        <div class="relative"><span class="absolute left-4 top-4 text-emerald-600 font-bold">Rp</span><input type="number" id="fin-cost" class="w-full border border-slate-200 p-4 pl-12 rounded-xl text-xl font-mono font-bold text-emerald-700 outline-none focus:border-emerald-500 shadow-inner" placeholder="0" required></div>
+                        <input type="date" id="fin-date" class="w-full border p-3 rounded-xl text-sm" required>
+                        <div class="bg-emerald-50/50 p-6 rounded-2xl border border-dashed border-emerald-200 text-center relative group hover:bg-emerald-50 transition">
+                            <input type="file" id="fin-photo" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" onchange="ut.previewImage(this, 'fin-preview')">
+                            <label for="fin-photo" class="text-emerald-600/60 text-xs font-bold cursor-pointer"><i class="fa-solid fa-receipt text-2xl mb-2 block"></i> UPLOAD NOTA / BON</label>
+                            <img id="fin-preview" class="hidden img-preview mt-4 rounded-xl border mx-auto max-h-48 shadow-md">
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-emerald-600 text-white py-4 mt-6 rounded-2xl font-bold hover:bg-emerald-700 shadow-xl shadow-emerald-500/20 transition">Simpan Pengeluaran</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- PWA SERVICE WORKER REGISTRATION -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('PWA: Service Worker Aktif.', reg.scope))
+                    .catch(err => console.log('PWA: Registrasi Gagal.', err));
+            });
+        }
+    </script>
+
+    <!-- BOOTSTRAP MODULAR APP -->
     <script type="module" src="assets/js/app.js"></script>
 
 </body>
