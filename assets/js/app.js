@@ -3,12 +3,14 @@ import { db } from './db.js';
 import { ui } from './ui.js';
 import { ut } from './utils.js';
 import { ai } from './modules/ai.js';
-import { wo } from './modules/wo.js'; // PENTING: Import modul Work Order
+import { wo } from './modules/wo.js';
+import { report } from './modules/report.js'; // IMPORT BARU: Module Laporan
+import { qr } from './modules/qr.js';         // IMPORT BARU: Module QR Code
 
 const app = {
-    // --- INITIALIZATION ---
+    // --- 1. INITIALIZATION ---
     init: async () => {
-        // 1. Setup Tanggal Laporan Default (Minggu ini)
+        // Set tanggal filter laporan default (Minggu ini)
         const s = dayjs().startOf('week').add(1,'day').format('YYYY-MM-DD');
         const e = dayjs().endOf('week').add(1,'day').format('YYYY-MM-DD');
         const startEl = document.getElementById('report-start');
@@ -16,212 +18,232 @@ const app = {
         if(startEl) startEl.value = s;
         if(endEl) endEl.value = e;
 
-        // 2. Cek Koneksi Cloud (GitHub)
+        // Cek Koneksi Cloud (GitHub)
         if(state.config.token) {
             const res = await db.sync();
-            if(res.status === 'success') {
-                console.log("Cloud Sync Success");
-            } else {
-                console.log("Sync Warning:", res.message);
-            }
+            if(res.status === 'success') console.log("Cloud Sync Success");
         } else {
-            // Jika belum ada token, minta user setting
-            ui.showModal('modal-settings');
+            ui.showModal('modal-settings'); // Minta token jika belum ada
         }
 
-        // 3. Jalankan Migrasi Data (Jika ada data versi lama)
+        // Jalankan Migrasi Data (jika update dari versi lama)
         state.initMigration();
         
-        // 4. Render Semua View (Aset, WO, Activity, Finance)
+        // Render Semua Tampilan
         ui.renderAssets();
-        ui.renderWO();       // Render Work Order (Baru)
+        ui.renderWO();
         ui.renderActivities();
         ui.renderFinance();
     },
 
-    // --- WORK ORDER ACTIONS (TAHAP 2) ---
+    // --- 2. WORK ORDER ACTIONS ---
     
-    // Tampilkan Modal Buat WO Baru
     showWOModal: () => {
         document.getElementById('woForm').reset();
-        ui.populateAssetSelectForWO(); // Isi dropdown aset
+        ui.populateAssetSelectForWO();
         ui.showModal('modal-wo');
     },
 
-    // Simpan WO Baru
     saveWO: (e) => {
         e.preventDefault();
-        
-        // Ambil value dari form
         const assetId = document.getElementById('wo-asset-id').value;
         const title = document.getElementById('wo-title').value;
         const priority = document.getElementById('wo-priority').value;
         const desc = document.getElementById('wo-desc').value;
         const type = document.getElementById('wo-type').value;
 
-        // Validasi
         if(!assetId) return Swal.fire('Error', 'Pilih aset terlebih dahulu!', 'warning');
 
-        // Panggil logic pembuatan WO
         wo.create(assetId, title, priority, desc, type);
         
-        // Refresh UI
         ui.closeModal('modal-wo');
         ui.renderWO();
-        ui.switchTab('wo'); // Pindah otomatis ke tab WO
-        
-        Swal.fire({
-            icon: 'success',
-            title: 'Work Order Dibuat',
-            text: 'Tiket berhasil dibuat dan status OPEN.',
-            timer: 1500,
-            showConfirmButton: false
-        });
+        ui.switchTab('wo');
+        Swal.fire('Sukses', 'Tiket Work Order dibuat.', 'success');
     },
 
-    // Update Status WO (Open -> Progress)
     updateWOStatus: (id, status) => {
         wo.updateStatus(id, status);
         ui.renderWO();
     },
-
-    // Tampilkan Modal Selesaikan WO
+    
     showFinishWOModal: (id) => {
-        // Simpan ID WO yang sedang diproses ke state sementara
-        state.ui.currentWOId = id;
-        // Reset form notes
+        state.ui.currentWOId = id; // Simpan ID sementara
         document.getElementById('wo-finish-notes').value = '';
+        document.getElementById('wo-finish-photo').value = ''; // Reset input file
         ui.showModal('modal-finish-wo');
     },
-
-    // Finalisasi WO (Progress -> Done)
-    finishWO: (e) => {
+    
+    finishWO: async (e) => {
         e.preventDefault();
         const id = state.ui.currentWOId;
         const notes = document.getElementById('wo-finish-notes').value;
         
         if(!notes) return Swal.fire('Info', 'Mohon isi catatan penyelesaian.', 'warning');
 
-        // Update status ke DONE & Trigger Logika PM Otomatis (di wo.js)
+        // Handle Upload Bukti Foto (Before/After)
+        const fileInput = document.getElementById('wo-finish-photo');
+        if(fileInput && fileInput.files.length > 0) {
+            // Simpan sebagai foto 'after'
+            await wo.addPhoto(id, 'after', fileInput.files[0]);
+        }
+
+        // Update status DONE & Trigger Logic PM
         wo.updateStatus(id, 'DONE', notes);
         
         ui.closeModal('modal-finish-wo');
         ui.renderWO();
-        ui.renderAssets(); // Refresh aset agar tanggal servis berubah (jika ada PM update)
-        
-        Swal.fire('Selesai', 'Pekerjaan selesai! Data aset telah diperbarui.', 'success');
+        ui.renderAssets(); // Update karena tanggal servis aset berubah
+        Swal.fire('Selesai', 'Pekerjaan selesai & Data aset terupdate.', 'success');
     },
 
-    // --- ASSET ACTIONS ---
+    // --- 3. QR CODE ACTIONS (BARU) ---
+    showQR: (id) => qr.show(id),
+    printQR: () => qr.print(),
 
-    showAssetModal: () => {
-        document.getElementById('assetForm').reset();
-        document.getElementById('asset-id').value = '';
+    // --- 4. BACKUP & RESTORE (BARU) ---
+    backupData: () => {
+        // Buat file JSON dari state.db
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.db));
+        const downloadAnchorNode = document.createElement('a');
+        const fileName = `TechPartner_Backup_${dayjs().format('YYYY-MM-DD_HHmm')}.json`;
         
-        // Populate Dropdowns
-        ui.populateLocationSelect();
-        ui.populateTypeSelect();
-        
-        ui.toggleIssueField('Normal');
-        ui.showModal('modal-asset');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", fileName);
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
     },
 
-    editAsset: (id) => {
-        const a = state.db.assets.find(x => x.id === id);
-        if(!a) return;
+    restoreData: (input) => {
+        if (!input.files[0]) return;
         
-        document.getElementById('asset-id').value = a.id;
-        
-        // Populate & Set Selected
-        ui.populateLocationSelect(a.location_id);
-        ui.populateTypeSelect(a.type_id);
-        
-        document.getElementById('asset-brand').value = a.brand || '';
-        document.getElementById('asset-model').value = a.model || '';
-        document.getElementById('asset-cond').value = a.cond;
-        document.getElementById('asset-issue').value = a.issue || '';
-        document.getElementById('asset-install').value = a.install || '';
-        document.getElementById('asset-service').value = a.service || '';
-        
-        ui.toggleIssueField(a.cond);
-        ui.showModal('modal-asset');
-    },
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const json = JSON.parse(e.target.result);
+                
+                // Validasi sederhana
+                if(!json.meta || !json.assets) throw new Error("Format file salah");
 
-    saveAsset: async (e) => {
-        e.preventDefault();
-        const id = document.getElementById('asset-id').value || ut.id();
-        
-        const item = {
-            id,
-            location_id: document.getElementById('asset-location').value, // Menggunakan ID Lokasi
-            type_id: document.getElementById('asset-type').value,         // Menggunakan ID Tipe
-            brand: document.getElementById('asset-brand').value,
-            model: document.getElementById('asset-model').value,
-            cond: document.getElementById('asset-cond').value,
-            issue: document.getElementById('asset-issue').value,
-            install: document.getElementById('asset-install').value,
-            service: document.getElementById('asset-service').value,
+                Swal.fire({
+                    title: 'Restore Data?',
+                    text: "Data saat ini akan ditimpa dengan data backup! Pastikan Anda yakin.",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Ya, Restore!'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        state.db = json;
+                        state.initMigration(); // Pastikan struktur data sesuai versi terbaru
+                        app.syncData(); // Langsung sync ke cloud agar aman
+                        
+                        Swal.fire('Berhasil!', 'Data telah dipulihkan.', 'success')
+                        .then(() => location.reload());
+                    }
+                });
+
+            } catch(err) {
+                Swal.fire('Error', 'File Backup Rusak atau Tidak Valid.', 'error');
+            }
         };
-        
-        if(!item.location_id || !item.type_id) {
-            return Swal.fire('Error', 'Lokasi dan Tipe wajib dipilih.', 'warning');
-        }
-
-        const idx = state.db.assets.findIndex(x => x.id === id);
-        if(idx >= 0) {
-            // Update (Merge agar field lain seperti next_pm_date tidak hilang)
-            state.db.assets[idx] = { ...state.db.assets[idx], ...item };
-        } else {
-            // New
-            state.db.assets.push(item);
-        }
-        
-        ui.closeModal('modal-asset');
-        ui.renderAssets();
-        
-        const locName = state.getLocationName(item.location_id);
-        db.push(`Asset Update: ${locName}`);
+        reader.readAsText(input.files[0]);
     },
 
-    // --- BULK ACTIONS ---
-    toggleSelect: (id) => {
+    // --- 5. REPORT ACTIONS (BARU) ---
+    downloadAssetReport: () => report.assetPDF(),
+    downloadWorkReport: () => report.woPDF(),
+    downloadFinanceReport: () => report.financePDF(),
+
+    // --- 6. STANDARD ASSET ACTIONS ---
+    showAssetModal: () => { 
+        document.getElementById('assetForm').reset(); 
+        document.getElementById('asset-id').value = ''; 
+        ui.populateLocationSelect(); 
+        ui.populateTypeSelect(); 
+        ui.toggleIssueField('Normal'); 
+        ui.showModal('modal-asset'); 
+    },
+
+    editAsset: (id) => { 
+        const a = state.db.assets.find(x => x.id === id); 
+        if(!a) return; 
+        document.getElementById('asset-id').value = a.id; 
+        ui.populateLocationSelect(a.location_id); 
+        ui.populateTypeSelect(a.type_id); 
+        document.getElementById('asset-brand').value = a.brand || ''; 
+        document.getElementById('asset-model').value = a.model || ''; 
+        document.getElementById('asset-cond').value = a.cond; 
+        document.getElementById('asset-issue').value = a.issue || ''; 
+        document.getElementById('asset-install').value = a.install || ''; 
+        document.getElementById('asset-service').value = a.service || ''; 
+        ui.toggleIssueField(a.cond); 
+        ui.showModal('modal-asset'); 
+    },
+
+    saveAsset: async (e) => { 
+        e.preventDefault(); 
+        const id = document.getElementById('asset-id').value || ut.id(); 
+        const item = { 
+            id, 
+            location_id: document.getElementById('asset-location').value, 
+            type_id: document.getElementById('asset-type').value, 
+            brand: document.getElementById('asset-brand').value, 
+            model: document.getElementById('asset-model').value, 
+            cond: document.getElementById('asset-cond').value, 
+            issue: document.getElementById('asset-issue').value, 
+            install: document.getElementById('asset-install').value, 
+            service: document.getElementById('asset-service').value, 
+        }; 
+        
+        const idx = state.db.assets.findIndex(x => x.id === id); 
+        if(idx >= 0) state.db.assets[idx] = { ...state.db.assets[idx], ...item }; 
+        else state.db.assets.push(item); 
+        
+        ui.closeModal('modal-asset'); 
+        ui.renderAssets(); 
+        const locName = state.getLocationName(item.location_id); 
+        db.push(`Asset: ${locName}`); 
+    },
+
+    // --- 7. BULK ACTIONS ---
+    toggleSelect: (id) => { 
         if(state.ui.selected.has(id)) state.ui.selected.delete(id); 
-        else state.ui.selected.add(id);
+        else state.ui.selected.add(id); 
         ui.renderAssets(); 
-        ui.updateBulkCount();
+        ui.updateBulkCount(); 
     },
 
-    bulkDelete: async () => {
-        if(!confirm(`Hapus ${state.ui.selected.size} item terpilih?`)) return;
-        state.db.assets = state.db.assets.filter(a => !state.ui.selected.has(a.id));
-        state.ui.multiSelect = false; // Reset mode
-        state.ui.selected.clear();
+    bulkDelete: async () => { 
+        if(!confirm(`Hapus ${state.ui.selected.size} item terpilih?`)) return; 
+        state.db.assets = state.db.assets.filter(a => !state.ui.selected.has(a.id)); 
+        state.ui.multiSelect = false; 
         ui.renderAssets(); 
-        document.getElementById('bulk-actions').classList.add('translate-y-full'); // Hide toolbar
-        db.push('Bulk Delete Assets');
+        document.getElementById('bulk-actions').classList.add('translate-y-full'); 
+        db.push('Bulk Del'); 
     },
 
-    bulkUpdateStatus: async (val) => {
+    bulkUpdateStatus: async (val) => { 
         state.db.assets.forEach(a => { 
             if(state.ui.selected.has(a.id)) { 
                 a.cond = val; 
                 if(val==='Normal') a.issue=''; 
             } 
-        });
-        state.ui.multiSelect = false;
-        state.ui.selected.clear();
+        }); 
+        state.ui.multiSelect = false; 
         ui.renderAssets(); 
-        document.getElementById('bulk-actions').classList.add('translate-y-full');
-        db.push(`Bulk Status: ${val}`);
+        document.getElementById('bulk-actions').classList.add('translate-y-full'); 
+        db.push('Bulk Upd'); 
     },
 
-    // --- ACTIVITY & FINANCE ---
-    saveActivity: async (e) => {
-        e.preventDefault();
+    // --- 8. ACTIVITY & FINANCE ---
+    saveActivity: async (e) => { 
+        e.preventDefault(); 
         const btn = e.target.querySelector('button[type="submit"]'); 
-        btn.innerText="Processing..."; btn.disabled=true;
-        
-        const photo = await ut.compress(document.getElementById('act-photo').files[0]);
+        btn.innerText="Processing..."; btn.disabled=true; 
+        const photo = await ut.compress(document.getElementById('act-photo').files[0]); 
         const item = { 
             id: ut.id(), 
             title: document.getElementById('act-title').value, 
@@ -230,37 +252,34 @@ const app = {
             desc: document.getElementById('act-desc').value, 
             img: photo, 
             date: dayjs().format('YYYY-MM-DD') 
-        };
-        
+        }; 
         state.db.activities.unshift(item); 
         ui.closeModal('modal-activity'); 
         ui.renderActivities(); 
         btn.innerText="Simpan Log"; btn.disabled=false; 
-        db.push(`Log: ${item.title}`);
+        db.push(`Log: ${item.title}`); 
     },
 
-    saveFinance: async (e) => {
-        e.preventDefault();
+    saveFinance: async (e) => { 
+        e.preventDefault(); 
         const btn = e.target.querySelector('button[type="submit"]'); 
-        btn.innerText="Processing..."; btn.disabled=true;
-        
-        const photo = await ut.compress(document.getElementById('fin-photo').files[0]);
+        btn.innerText="Processing..."; btn.disabled=true; 
+        const photo = await ut.compress(document.getElementById('fin-photo').files[0]); 
         const item = { 
             id: ut.id(), 
             item: document.getElementById('fin-item').value, 
             cost: parseInt(document.getElementById('fin-cost').value), 
             date: document.getElementById('fin-date').value, 
             img: photo 
-        };
-        
+        }; 
         state.db.finances.unshift(item); 
         ui.closeModal('modal-finance'); 
         ui.renderFinance(); 
         btn.innerText="Simpan"; btn.disabled=false; 
-        db.push(`Fin: ${item.item}`);
+        db.push(`Fin: ${item.item}`); 
     },
 
-    // --- SYSTEM & SETTINGS ---
+    // --- 9. SYNC & SETTINGS ---
     syncData: async () => {
         const badge = document.getElementById('sync-badge');
         badge.classList.remove('bg-success', 'bg-danger');
@@ -271,8 +290,10 @@ const app = {
         badge.classList.remove('bg-warning', 'animate-pulse');
         if(res.status === 'success') {
             badge.classList.add('bg-success');
-            // Re-render semua agar data baru muncul
-            ui.renderAssets(); ui.renderWO(); ui.renderActivities(); ui.renderFinance();
+            ui.renderAssets(); 
+            ui.renderWO(); 
+            ui.renderActivities(); 
+            ui.renderFinance();
             Swal.fire({ icon: 'success', title: 'Data Terupdate', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
         } else {
             badge.classList.add('bg-danger');
@@ -292,22 +313,17 @@ const app = {
         localStorage.setItem('gemini_key', state.config.gemini);
         
         ui.closeModal('modal-settings');
-        app.syncData(); // Coba sync langsung setelah save
-    },
-
-    // --- PLACEHOLDERS UNTUK EXPORT (TAHAP 3) ---
-    downloadAssetReport: () => alert("Fitur Export V6 sedang disiapkan untuk Tahap 3!"),
-    downloadWorkReport: () => alert("Fitur Export V6 sedang disiapkan untuk Tahap 3!"),
-    downloadFinanceReport: () => alert("Fitur Export V6 sedang disiapkan untuk Tahap 3!")
+        app.syncData();
+    }
 };
 
-// --- EXPOSE GLOBAL (Agar onclick HTML berfungsi) ---
+// Expose ke Window agar onclick di HTML bisa akses 'app.xxx'
 window.app = app;
 window.ui = ui;
 window.ut = ut;
 window.ai = ai;
 
-// Start App saat DOM Ready
+// Mulai Aplikasi
 document.addEventListener('DOMContentLoaded', app.init);
 
 export { app };
