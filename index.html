@@ -2,15 +2,15 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TechPartner: Super App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechPartner: Integrated Workspace</title>
     
     <!-- LIBRARIES -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.7/dayjs.min.js"></script>
-    <!-- Export Libraries -->
+    <!-- Export Engines -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
@@ -19,209 +19,366 @@
 
     <script>
         tailwind.config = {
-            theme: { extend: { colors: { primary: '#2563eb', dark: '#0f172a', money: '#10b981' } } }
+            theme: { extend: { colors: { primary: '#2563eb', dark: '#0f172a', money: '#059669' } } }
         }
     </script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; -webkit-tap-highlight-color: transparent; }
-        /* Timeline Styles */
-        .timeline-line { position: absolute; left: 18px; top: 35px; bottom: 0; width: 2px; background: #e2e8f0; z-index: 0; }
-        /* Image Preview */
-        .img-thumb { width: 100%; height: 120px; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0; }
-        .receipt-card { background-image: radial-gradient(#f1f5f9 1px, transparent 1px); background-size: 10px 10px; }
+        body { font-family: 'Segoe UI', Inter, sans-serif; background-color: #f1f5f9; }
+        .asset-card { transition: all 0.2s; }
+        .asset-card.selected { border: 2px solid #2563eb; background-color: #eff6ff; }
         
+        /* Timeline Styles */
+        .timeline-line { position: absolute; left: 24px; top: 0; bottom: 0; width: 2px; background: #e2e8f0; z-index: 0; }
+        
+        /* Image Previews */
+        .img-thumb { width: 100%; height: 140px; object-fit: cover; border-radius: 8px; border: 1px solid #cbd5e1; cursor: pointer; transition: opacity 0.2s; }
+        .img-thumb:hover { opacity: 0.9; }
+        
+        /* Receipt Card */
+        .receipt-pattern { background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 8px 8px; }
+
+        /* Print Layout */
         @media print {
-            @page { size: A4 portrait; margin: 10mm; }
-            body { background: white; }
-            nav, .no-print, .tab-nav, .fab-add { display: none !important; }
-            #view-assets, #view-activity, #view-finance { display: block !important; margin-bottom: 50px; }
+            @page { size: A4; margin: 10mm; }
+            body { background: white; -webkit-print-color-adjust: exact; }
+            nav, .no-print, .tab-nav, #bulk-actions { display: none !important; }
+            #view-assets, #view-activity, #view-finance { display: block !important; margin-bottom: 40px; page-break-after: always; }
+            .hidden-print { display: none !important; }
+            .grid-cols-1 { grid-template-columns: repeat(2, 1fr) !important; }
         }
     </style>
 </head>
 <body class="text-slate-800 h-screen flex flex-col overflow-hidden">
-<!-- NAVBAR -->
-    <nav class="bg-slate-900 text-white px-4 py-3 flex justify-between items-center shadow-lg z-30 no-print">
-        <div class="flex items-center gap-3">
-            <div class="bg-primary p-2 rounded-lg">
-                <i class="fa-solid fa-robot text-lg"></i>
+
+    <!-- NAVBAR -->
+    <nav class="bg-slate-900 text-white px-6 py-3 flex justify-between items-center shadow-lg z-30 no-print">
+        <div class="flex items-center gap-4">
+            <div class="bg-primary p-2 rounded-lg shadow-lg shadow-blue-500/50">
+                <i class="fa-solid fa-layer-group text-xl"></i>
             </div>
             <div>
-                <h1 class="font-bold text-lg leading-none">TechPartner</h1>
-                <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-1">General & IT Assistant</p>
+                <h1 class="font-bold text-xl leading-none">TechPartner</h1>
+                <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-1">General & IT Operations</p>
             </div>
         </div>
         
-        <div class="flex gap-3">
-            <!-- Sync Indicator -->
-            <button onclick="app.syncData()" class="relative p-2 rounded-full hover:bg-slate-800 transition">
+        <div class="flex gap-3 items-center">
+            <!-- Export Group -->
+            <div class="flex bg-slate-800 rounded-lg p-1 border border-slate-700 items-center mr-4">
+                <span class="text-[10px] font-bold text-slate-500 px-3 uppercase tracking-wider">Export Data</span>
+                <button onclick="app.downloadJSON()" class="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-purple-400 hover:bg-slate-700 rounded transition" title="Backup Full Database"><i class="fa-solid fa-database"></i></button>
+                <button onclick="app.downloadExcel()" class="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-green-400 hover:bg-slate-700 rounded transition" title="Laporan Excel"><i class="fa-solid fa-file-excel"></i></button>
+                <button onclick="app.downloadPDF()" class="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded transition" title="Laporan PDF"><i class="fa-solid fa-file-pdf"></i></button>
+                <div class="w-px h-5 bg-slate-600 mx-1"></div>
+                <button onclick="window.print()" class="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 rounded transition" title="Cetak Layar"><i class="fa-solid fa-print"></i></button>
+            </div>
+
+            <div class="h-8 w-px bg-slate-700 mx-2"></div>
+
+            <button onclick="app.syncData()" class="relative p-2.5 rounded-lg hover:bg-slate-800 transition border border-transparent hover:border-slate-700" title="Sync Cloud">
                 <i class="fa-solid fa-cloud-arrow-down text-slate-300"></i>
-                <span id="sync-badge" class="absolute top-1 right-1 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-slate-900"></span>
+                <span id="sync-badge" class="absolute top-2 right-2 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-slate-900"></span>
             </button>
-            <button onclick="ui.showSettings()" class="p-2 rounded-full hover:bg-slate-800 transition">
+            <button onclick="ui.showSettings()" class="p-2.5 rounded-lg hover:bg-slate-800 transition border border-transparent hover:border-slate-700" title="Settings">
                 <i class="fa-solid fa-gear text-slate-300"></i>
             </button>
         </div>
     </nav>
-<!-- TABS (Scrollable) -->
-    <div class="bg-white border-b flex overflow-x-auto tab-nav no-print shadow-sm z-20">
-        <button onclick="ui.switchTab('assets')" id="tab-assets" class="flex-1 min-w-[100px] py-3 text-sm font-bold border-b-2 border-primary text-primary transition">
-            <i class="fa-solid fa-box mr-1"></i> Aset
+
+    <!-- TABS NAVIGATION -->
+    <div class="bg-white border-b px-6 flex gap-8 text-sm overflow-x-auto tab-nav no-print shadow-[0_4px_6px_-1px_rgba(0,0,0,0.02)]">
+        <button onclick="ui.switchTab('assets')" id="tab-assets" class="py-4 border-b-2 border-primary text-primary font-bold flex items-center gap-2 transition hover:bg-slate-50 px-4">
+            <i class="fa-solid fa-server"></i> Aset (AC & Lampu)
         </button>
-        <button onclick="ui.switchTab('activity')" id="tab-activity" class="flex-1 min-w-[100px] py-3 text-sm font-medium text-slate-500 hover:text-slate-800 border-b-2 border-transparent transition">
-            <i class="fa-solid fa-clock-rotate-left mr-1"></i> Jurnal
+        <button onclick="ui.switchTab('activity')" id="tab-activity" class="py-4 border-b-2 border-transparent text-slate-500 font-medium flex items-center gap-2 transition hover:text-slate-800 hover:bg-slate-50 px-4">
+            <i class="fa-solid fa-list-check"></i> Jurnal & Tugas
         </button>
-        <button onclick="ui.switchTab('finance')" id="tab-finance" class="flex-1 min-w-[100px] py-3 text-sm font-medium text-slate-500 hover:text-slate-800 border-b-2 border-transparent transition">
-            <i class="fa-solid fa-wallet mr-1"></i> Keuangan
+        <button onclick="ui.switchTab('finance')" id="tab-finance" class="py-4 border-b-2 border-transparent text-slate-500 font-medium flex items-center gap-2 transition hover:text-slate-800 hover:bg-slate-50 px-4">
+            <i class="fa-solid fa-wallet"></i> Keuangan & Bon
         </button>
     </div>
 
-    <!-- MAIN CONTENT -->
-    <main class="flex-1 overflow-y-auto p-4 bg-slate-50 relative">
-<!-- VIEW: ASSETS -->
-        <div id="view-assets" class="block pb-24">
-            <!-- Search & Actions -->
-            <div class="flex gap-2 mb-4 sticky top-0 bg-slate-50 z-10 py-2 no-print">
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 overflow-y-auto p-6 bg-slate-50/50 relative scroll-smooth">
+        
+        <!-- ================= VIEW 1: ASSETS (Legacy Feature) ================= -->
+        <div id="view-assets" class="block max-w-7xl mx-auto">
+            <!-- Asset Toolbar -->
+            <div class="flex flex-col md:flex-row gap-4 mb-6 sticky top-0 bg-slate-50/95 backdrop-blur z-10 py-3 no-print">
                 <div class="relative flex-1">
-                    <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400"></i>
-                    <input type="text" id="searchAsset" onkeyup="app.renderAssets()" placeholder="Cari aset..." class="w-full pl-9 pr-3 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-primary outline-none">
+                    <i class="fa-solid fa-search absolute left-4 top-3.5 text-slate-400"></i>
+                    <input type="text" id="searchAsset" onkeyup="app.renderAssets()" placeholder="Cari lokasi, merk, atau kondisi..." class="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition">
                 </div>
-                <button onclick="ui.showAssetModal()" class="bg-primary text-white w-10 h-10 rounded-lg shadow-md flex items-center justify-center hover:bg-blue-600">
-                    <i class="fa-solid fa-plus"></i>
-                </button>
+                <div class="flex gap-2">
+                    <button onclick="ui.toggleMultiSelect()" id="btn-multiselect" class="px-5 py-3 border border-slate-200 bg-white rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 transition shadow-sm">
+                        <i class="fa-solid fa-check-double mr-2"></i> Pilih
+                    </button>
+                    <button onclick="ui.showAssetModal()" class="px-6 py-3 bg-primary text-white rounded-xl text-sm font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition flex items-center">
+                        <i class="fa-solid fa-plus mr-2"></i> Tambah Aset
+                    </button>
+                </div>
+            </div>
+
+            <!-- Asset Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                    <div class="text-xs text-slate-400 font-bold uppercase tracking-wider">Total Aset</div>
+                    <div class="text-3xl font-black text-slate-800" id="stat-total">0</div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-green-500">
+                    <div class="text-xs text-slate-400 font-bold uppercase tracking-wider">Normal</div>
+                    <div class="text-3xl font-black text-green-600" id="stat-normal">0</div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-red-500">
+                    <div class="text-xs text-slate-400 font-bold uppercase tracking-wider">Rusak</div>
+                    <div class="text-3xl font-black text-red-600" id="stat-issue">0</div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-yellow-500">
+                    <div class="text-xs text-slate-400 font-bold uppercase tracking-wider">Perlu Servis</div>
+                    <div class="text-3xl font-black text-yellow-600" id="stat-maintenance">0</div>
+                </div>
             </div>
 
             <!-- Asset Grid -->
-            <div id="asset-list" class="grid grid-cols-1 gap-3">
-                <!-- JS Populated -->
+            <div id="asset-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-20">
+                <!-- Javascript will populate this -->
             </div>
-            <div class="mt-4 text-center text-xs text-slate-400">Total Aset Tercatat: <span id="stat-total-asset">0</span></div>
         </div>
-<!-- VIEW: ACTIVITY LOG -->
-        <div id="view-activity" class="hidden pb-24 max-w-2xl mx-auto">
-            <div class="flex justify-between items-center mb-6">
+
+        <!-- ================= VIEW 2: ACTIVITY JOURNAL (Advance Feature) ================= -->
+        <div id="view-activity" class="hidden max-w-4xl mx-auto pb-20">
+            <div class="flex justify-between items-center mb-8 no-print">
                 <div>
-                    <h2 class="text-xl font-bold text-slate-800">Jurnal Harian</h2>
-                    <p class="text-xs text-slate-500" id="current-date-log">Today</p>
+                    <h2 class="text-2xl font-black text-slate-800">Jurnal & Tugas</h2>
+                    <p class="text-slate-500 text-sm font-medium mt-1">Timeline aktivitas harian, IT Support, & GA</p>
                 </div>
-                <button onclick="ui.showActivityModal()" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-bold shadow hover:bg-slate-700">
-                    <i class="fa-solid fa-pen-to-square mr-1"></i> Catat
+                <button onclick="ui.showActivityModal()" class="px-6 py-3 bg-slate-800 text-white rounded-xl text-sm font-bold shadow-lg hover:bg-slate-700 transition flex items-center">
+                    <i class="fa-solid fa-camera mr-2"></i> Catat Kegiatan
                 </button>
             </div>
 
-            <!-- Timeline Container -->
-            <div id="activity-list" class="space-y-6 relative">
-                <!-- JS Populated Timeline -->
+            <div class="relative pl-4 space-y-8" id="activity-list">
+                <!-- Javascript will populate timeline -->
+            </div>
+            
+            <div id="empty-activity" class="hidden text-center py-10">
+                <div class="inline-block p-4 rounded-full bg-slate-100 text-slate-300 mb-3"><i class="fa-solid fa-clipboard-list text-4xl"></i></div>
+                <p class="text-slate-500 font-medium">Belum ada jurnal kegiatan.</p>
             </div>
         </div>
-<!-- VIEW: FINANCE -->
-        <div id="view-finance" class="hidden pb-24 max-w-2xl mx-auto">
-            <!-- Dashboard Card -->
-            <div class="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl p-5 text-white shadow-lg mb-6 relative overflow-hidden">
-                <i class="fa-solid fa-coins absolute -right-4 -bottom-4 text-8xl opacity-10"></i>
-                <p class="text-emerald-100 text-xs font-bold uppercase tracking-wider">Total Belanja Bulan Ini</p>
-                <h2 class="text-3xl font-black mt-1" id="finance-total">Rp 0</h2>
-                <div class="mt-4 flex gap-2">
-                    <button onclick="ui.showFinanceModal()" class="bg-white text-emerald-600 px-4 py-1.5 rounded-lg text-xs font-bold shadow hover:bg-emerald-50">
-                        <i class="fa-solid fa-plus mr-1"></i> Catat Belanja
-                    </button>
-                    <button onclick="app.exportFinance()" class="bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-800">
-                        <i class="fa-solid fa-file-excel mr-1"></i> Laporan
-                    </button>
+
+        <!-- ================= VIEW 3: FINANCE & RECEIPTS (Advance Feature) ================= -->
+        <div id="view-finance" class="hidden max-w-4xl mx-auto pb-20">
+            <!-- Finance Dashboard -->
+            <div class="bg-gradient-to-br from-emerald-600 to-teal-800 rounded-3xl p-8 text-white shadow-xl shadow-emerald-500/20 mb-8 relative overflow-hidden">
+                <i class="fa-solid fa-money-bill-wave absolute -right-6 -bottom-10 text-[10rem] opacity-10 rotate-12"></i>
+                <div class="relative z-10">
+                    <p class="text-emerald-100 text-xs font-bold uppercase tracking-widest mb-2">Total Belanja (Bulan Ini)</p>
+                    <h2 class="text-5xl font-black tracking-tight" id="finance-total">Rp 0</h2>
+                    <div class="mt-6 flex gap-3">
+                        <button onclick="ui.showFinanceModal()" class="bg-white text-emerald-800 px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg hover:bg-emerald-50 transition flex items-center">
+                            <i class="fa-solid fa-plus mr-2"></i> Catat Pembelian
+                        </button>
+                        <button onclick="app.downloadExcel()" class="bg-emerald-700/50 text-white border border-emerald-400/30 px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-emerald-700 transition">
+                            <i class="fa-solid fa-file-arrow-down mr-2"></i> Download Laporan
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <h3 class="font-bold text-slate-700 mb-3 ml-1">Riwayat Transaksi</h3>
-            <div id="finance-list" class="space-y-3">
-                <!-- JS Populated List -->
+            <div class="flex items-center gap-3 mb-4">
+                <div class="h-px bg-slate-200 flex-1"></div>
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Riwayat Transaksi</span>
+                <div class="h-px bg-slate-200 flex-1"></div>
+            </div>
+
+            <div id="finance-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Javascript will populate receipts -->
+            </div>
+             <div id="empty-finance" class="hidden text-center py-10 col-span-2">
+                <p class="text-slate-500 font-medium">Belum ada data pembelian.</p>
             </div>
         </div>
+
     </main>
-<!-- MODAL: ASSET (Simplified for Android) -->
-    <div id="modal-asset" class="fixed inset-0 bg-black/50 hidden z-50 items-end sm:items-center justify-center p-0 sm:p-4 no-print"><div class="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-5 max-h-[90vh] overflow-y-auto animate-slide-up"><h3 class="font-bold text-lg mb-4">Data Aset</h3><form onsubmit="app.saveAsset(event)"><input type="hidden" id="asset-id"><div class="grid grid-cols-2 gap-2 mb-3"><label class="border p-3 rounded-lg text-center cursor-pointer has-[:checked]:bg-blue-50 has-[:checked]:border-blue-500"><input type="radio" name="cat" value="AC" checked class="hidden"><i class="fa-solid fa-wind block text-xl mb-1"></i><span class="text-xs font-bold">AC</span></label><label class="border p-3 rounded-lg text-center cursor-pointer has-[:checked]:bg-yellow-50 has-[:checked]:border-yellow-500"><input type="radio" name="cat" value="Light" class="hidden"><i class="fa-regular fa-lightbulb block text-xl mb-1"></i><span class="text-xs font-bold">Lampu</span></label></div><input id="asset-loc" placeholder="Lokasi (cth: R. Meeting)" class="w-full border p-3 rounded-lg mb-3" required><input id="asset-model" placeholder="Merk/Model" class="w-full border p-3 rounded-lg mb-3"><select id="asset-cond" class="w-full border p-3 rounded-lg mb-3"><option value="Normal">Normal</option><option value="Rusak">Rusak</option><option value="Perlu Servis">Perlu Servis</option></select><textarea id="asset-issue" placeholder="Keluhan..." class="w-full border p-3 rounded-lg mb-4 h-20"></textarea><div class="flex gap-2"><button type="button" onclick="ui.closeModal('modal-asset')" class="flex-1 py-3 text-slate-500">Batal</button><button type="submit" class="flex-1 bg-primary text-white rounded-lg font-bold">Simpan</button></div></form></div></div>
 
-    <!-- MODAL: ACTIVITY (NEW - With Photo) -->
-    <div id="modal-activity" class="fixed inset-0 bg-black/50 hidden z-50 items-end sm:items-center justify-center p-0 sm:p-4 no-print">
-        <div class="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-5 max-h-[90vh] overflow-y-auto">
-            <h3 class="font-bold text-lg mb-4">Catat Kegiatan</h3>
-            <form onsubmit="app.saveActivity(event)">
-                <input type="text" id="act-title" placeholder="Judul Kegiatan (cth: Perbaikan Jaringan)" class="w-full border p-3 rounded-lg mb-3 font-bold" required>
-                
-                <div class="flex gap-2 mb-3">
-                    <input type="time" id="act-time" class="border p-2 rounded-lg w-24" required>
-                    <select id="act-tag" class="border p-2 rounded-lg flex-1 bg-white">
-                        <option value="Umum">Umum</option>
-                        <option value="IT">IT Support</option>
-                        <option value="GA">Maintenance GA</option>
-                        <option value="Rapat">Meeting/Briefing</option>
-                    </select>
-                </div>
-
-                <textarea id="act-desc" placeholder="Deskripsi detail..." class="w-full border p-3 rounded-lg mb-3 h-24 text-sm"></textarea>
-
-                <!-- Photo Upload -->
-                <div class="mb-4">
-                    <label class="block text-xs font-bold text-slate-500 mb-1">Foto Bukti (Opsional)</label>
-                    <input type="file" id="act-photo" accept="image/*" class="text-sm text-slate-500 w-full" onchange="ut.previewImage(this, 'act-preview')">
-                    <img id="act-preview" class="hidden mt-2 w-full h-32 object-cover rounded-lg border">
-                </div>
-
-                <div class="flex gap-2">
-                    <button type="button" onclick="ui.closeModal('modal-activity')" class="flex-1 py-3 text-slate-500">Batal</button>
-                    <button type="submit" class="flex-1 bg-slate-800 text-white rounded-lg font-bold">Simpan Log</button>
-                </div>
-            </form>
+    <!-- FLOATING BULK ACTIONS (For Assets) -->
+    <div id="bulk-actions" class="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.1)] z-30 transform translate-y-full transition-transform duration-300 flex justify-between items-center no-print">
+        <div class="font-bold text-slate-700 flex items-center gap-2">
+            <span class="bg-slate-100 text-slate-600 px-3 py-1 rounded-lg text-sm" id="selected-count">0</span>
+            <span class="text-sm">Item Dipilih</span>
         </div>
-    </div>
-<!-- MODAL: FINANCE (NEW - With Receipt) -->
-    <div id="modal-finance" class="fixed inset-0 bg-black/50 hidden z-50 items-end sm:items-center justify-center p-0 sm:p-4 no-print">
-        <div class="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-5 max-h-[90vh] overflow-y-auto">
-            <h3 class="font-bold text-lg mb-4 text-emerald-700">Catat Pengeluaran</h3>
-            <form onsubmit="app.saveFinance(event)">
-                <input type="text" id="fin-item" placeholder="Nama Barang (cth: Kabel LAN 1 Roll)" class="w-full border p-3 rounded-lg mb-3" required>
-                
-                <div class="relative mb-3">
-                    <span class="absolute left-3 top-3 text-slate-400 font-bold">Rp</span>
-                    <input type="number" id="fin-cost" placeholder="0" class="w-full border p-3 pl-10 rounded-lg font-mono font-bold text-lg" required>
-                </div>
-
-                <!-- Receipt Upload -->
-                <div class="mb-4 bg-slate-50 p-3 rounded-lg border border-dashed border-slate-300">
-                    <label class="block text-xs font-bold text-slate-500 mb-2 text-center">Foto Bon / Nota</label>
-                    <input type="file" id="fin-photo" accept="image/*" class="hidden" onchange="ut.previewImage(this, 'fin-preview')">
-                    <label for="fin-photo" class="block w-full text-center py-2 bg-white border rounded cursor-pointer hover:bg-slate-100 text-sm"><i class="fa-solid fa-camera mr-1"></i> Ambil Foto</label>
-                    <img id="fin-preview" class="hidden mt-2 w-full h-40 object-contain bg-white rounded border">
-                </div>
-
-                <div class="flex gap-2">
-                    <button type="button" onclick="ui.closeModal('modal-finance')" class="flex-1 py-3 text-slate-500">Batal</button>
-                    <button type="submit" class="flex-1 bg-emerald-600 text-white rounded-lg font-bold">Simpan</button>
-                </div>
-            </form>
+        <div class="flex gap-2">
+            <button onclick="app.bulkDelete()" class="px-5 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-bold hover:bg-red-100 transition border border-red-100">Hapus</button>
+            <div class="w-px bg-slate-200 mx-1"></div>
+            <button onclick="app.bulkUpdateStatus('Perlu Servis')" class="px-4 py-2 text-yellow-600 hover:bg-yellow-50 rounded-lg text-sm font-bold transition">Mark Servis</button>
+            <button onclick="app.bulkUpdateStatus('Normal')" class="px-5 py-2 bg-green-600 text-white rounded-lg text-sm font-bold hover:bg-green-700 transition shadow-lg shadow-green-500/30">Set Normal</button>
         </div>
     </div>
 
-    <!-- MODAL: SETTINGS -->
-    <div id="modal-settings" class="fixed inset-0 bg-black/80 hidden z-50 items-center justify-center p-4 no-print">
-        <div class="bg-white w-full max-w-sm rounded-xl p-5">
-            <h3 class="font-bold mb-4">Koneksi Database</h3>
-            <input id="conf-owner" placeholder="GitHub Username" class="w-full border p-2 mb-2 rounded text-sm">
-            <input id="conf-repo" placeholder="Repo Name" class="w-full border p-2 mb-2 rounded text-sm">
-            <input id="conf-token" type="password" placeholder="GitHub Token (ghp_...)" class="w-full border p-2 mb-4 rounded text-sm">
-            <button onclick="app.saveSettings()" class="w-full bg-primary text-white py-2 rounded font-bold">Connect</button>
-            <button onclick="ui.closeModal('modal-settings')" class="w-full mt-2 text-sm text-slate-500">Close</button>
+    <!-- ================== MODALS ================== -->
+
+    <!-- 1. ASSET MODAL -->
+    <div id="modal-asset" class="fixed inset-0 bg-slate-900/40 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
+            <div class="p-5 border-b flex justify-between items-center">
+                <h3 class="font-bold text-lg text-slate-800" id="asset-modal-title">Data Aset</h3>
+                <button onclick="ui.closeModal('modal-asset')" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <form id="assetForm" onsubmit="app.saveAsset(event)">
+                    <input type="hidden" id="asset-id">
+                    <div class="grid grid-cols-2 gap-3 mb-5">
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="cat" value="AC" checked class="peer hidden" onchange="ui.toggleFormType()">
+                            <div class="peer-checked:bg-sky-50 peer-checked:text-sky-700 peer-checked:border-sky-500 border border-slate-200 p-3 rounded-xl text-center hover:bg-slate-50 transition">
+                                <i class="fa-solid fa-wind text-xl mb-1 block"></i><span class="text-xs font-bold">AC</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="cat" value="Light" class="peer hidden" onchange="ui.toggleFormType()">
+                            <div class="peer-checked:bg-yellow-50 peer-checked:text-yellow-700 peer-checked:border-yellow-500 border border-slate-200 p-3 rounded-xl text-center hover:bg-slate-50 transition">
+                                <i class="fa-regular fa-lightbulb text-xl mb-1 block"></i><span class="text-xs font-bold">Lampu</span>
+                            </div>
+                        </label>
+                    </div>
+                    <input id="asset-loc" class="w-full border p-3 rounded-lg mb-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none" placeholder="Lokasi (cth: Ruang Server)" required>
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <input id="asset-brand" class="w-full border p-3 rounded-lg text-sm outline-none" placeholder="Merk">
+                        <input id="asset-model" class="w-full border p-3 rounded-lg text-sm outline-none" placeholder="Model/PK">
+                    </div>
+                    <select id="asset-subtype" class="w-full border p-3 rounded-lg mb-3 text-sm bg-white outline-none"></select>
+                    <div class="mb-4 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <label class="text-[10px] font-bold uppercase text-slate-400 mb-2 block">Kondisi</label>
+                        <select id="asset-cond" class="w-full border p-2.5 rounded-lg text-sm mb-3 outline-none" onchange="ui.toggleIssueField(this.value)">
+                            <option value="Normal">✅ Normal</option>
+                            <option value="Perlu Servis">⚠️ Perlu Servis</option>
+                            <option value="Rusak">❌ Rusak</option>
+                        </select>
+                        <textarea id="asset-issue" class="w-full border p-2.5 rounded-lg text-sm h-20 hidden outline-none focus:border-red-400" placeholder="Detail kerusakan..."></textarea>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 mb-6">
+                        <div><label class="text-[10px] font-bold uppercase text-slate-400">Tgl Pasang</label><input type="date" id="asset-install" class="w-full border p-2 rounded-lg text-sm text-slate-600"></div>
+                        <div><label class="text-[10px] font-bold uppercase text-slate-400">Servis Terakhir</label><input type="date" id="asset-service" class="w-full border p-2 rounded-lg text-sm text-slate-600"></div>
+                    </div>
+                    <button type="submit" class="w-full bg-primary text-white py-3 rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition">Simpan Data</button>
+                </form>
+            </div>
         </div>
     </div>
-<!-- LOGIC -->
+
+    <!-- 2. ACTIVITY MODAL (Advance: Photo) -->
+    <div id="modal-activity" class="fixed inset-0 bg-slate-900/40 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
+            <div class="p-5 border-b flex justify-between items-center bg-slate-50 rounded-t-2xl">
+                <h3 class="font-bold text-lg text-slate-800">Catat Kegiatan Baru</h3>
+                <button onclick="ui.closeModal('modal-activity')" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <form onsubmit="app.saveActivity(event)">
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Judul Tugas</label>
+                        <input id="act-title" class="w-full border border-slate-300 p-3 rounded-lg font-bold text-slate-800 focus:border-primary outline-none" placeholder="Cth: Perbaikan Jaringan LAN" required>
+                    </div>
+                    <div class="flex gap-3 mb-4">
+                        <div class="w-1/3">
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Jam</label>
+                            <input type="time" id="act-time" class="w-full border p-3 rounded-lg text-sm" required>
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Kategori</label>
+                            <select id="act-tag" class="w-full border p-3 rounded-lg text-sm bg-white">
+                                <option value="Umum">Umum / Harian</option>
+                                <option value="IT">IT Support</option>
+                                <option value="GA">Maintenance GA</option>
+                                <option value="Rapat">Meeting / Briefing</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Deskripsi Detail</label>
+                        <textarea id="act-desc" class="w-full border p-3 rounded-lg text-sm h-24 focus:border-primary outline-none" placeholder="Jelaskan apa yang dikerjakan..."></textarea>
+                    </div>
+                    <div class="mb-6 bg-slate-50 p-4 rounded-xl border border-dashed border-slate-300 text-center">
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Foto Bukti (Opsional)</label>
+                        <input type="file" id="act-photo" accept="image/*" class="hidden" onchange="ut.previewImage(this, 'act-preview')">
+                        <label for="act-photo" class="inline-block px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-600 cursor-pointer hover:bg-slate-100 transition">
+                            <i class="fa-solid fa-camera mr-2"></i> Pilih Foto
+                        </label>
+                        <img id="act-preview" class="hidden img-preview mt-3">
+                        <p class="text-[10px] text-slate-400 mt-2">Otomatis dikompres agar ringan.</p>
+                    </div>
+                    <button type="submit" class="w-full bg-slate-800 text-white py-3 rounded-xl font-bold hover:bg-slate-700 shadow-lg transition">Simpan ke Jurnal</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. FINANCE MODAL (Advance: Receipt) -->
+    <div id="modal-finance" class="fixed inset-0 bg-slate-900/40 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh]">
+            <div class="p-5 border-b flex justify-between items-center bg-emerald-50 rounded-t-2xl">
+                <h3 class="font-bold text-lg text-emerald-800">Input Pengeluaran</h3>
+                <button onclick="ui.closeModal('modal-finance')" class="text-emerald-400 hover:text-emerald-600"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <form onsubmit="app.saveFinance(event)">
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nama Barang / Keperluan</label>
+                        <input id="fin-item" class="w-full border border-slate-300 p-3 rounded-lg font-bold focus:border-emerald-500 outline-none" placeholder="Cth: Kabel UTP 1 Roll" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Biaya (Rp)</label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-3 text-slate-400 font-bold">Rp</span>
+                            <input type="number" id="fin-cost" class="w-full border border-slate-300 p-3 pl-10 rounded-lg text-lg font-mono font-bold text-emerald-600 focus:border-emerald-500 outline-none" placeholder="0" required>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tanggal Transaksi</label>
+                        <input type="date" id="fin-date" class="w-full border p-3 rounded-lg text-sm text-slate-600" required>
+                    </div>
+                    <div class="mb-6 bg-emerald-50/50 p-4 rounded-xl border border-dashed border-emerald-200 text-center">
+                        <label class="block text-xs font-bold text-emerald-600/70 uppercase mb-2">Foto Bon / Nota</label>
+                        <input type="file" id="fin-photo" accept="image/*" class="hidden" onchange="ut.previewImage(this, 'fin-preview')">
+                        <label for="fin-photo" class="inline-block px-4 py-2 bg-white border border-emerald-100 rounded-lg text-sm font-bold text-emerald-600 cursor-pointer hover:bg-emerald-50 transition">
+                            <i class="fa-solid fa-receipt mr-2"></i> Foto Nota
+                        </label>
+                        <img id="fin-preview" class="hidden img-preview mt-3 border-emerald-200">
+                    </div>
+                    <button type="submit" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition">Simpan Transaksi</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. SETTINGS MODAL -->
+    <div id="modal-settings" class="fixed inset-0 bg-slate-900/80 hidden z-50 items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <div class="bg-slate-900 text-white p-5">
+                <h3 class="font-bold text-lg"><i class="fa-brands fa-github mr-2"></i>Database Cloud</h3>
+                <p class="text-xs text-slate-400 mt-1">Hubungkan ke Repository Anda.</p>
+            </div>
+            <div class="p-6 space-y-4">
+                <div><label class="text-xs font-bold text-slate-500 uppercase">Username</label><input id="conf-owner" class="w-full border p-2.5 rounded-lg mt-1 text-sm"></div>
+                <div><label class="text-xs font-bold text-slate-500 uppercase">Repo Name</label><input id="conf-repo" class="w-full border p-2.5 rounded-lg mt-1 text-sm"></div>
+                <div><label class="text-xs font-bold text-slate-500 uppercase">Token (ghp_...)</label><input type="password" id="conf-token" class="w-full border p-2.5 rounded-lg mt-1 text-sm"></div>
+                <div><label class="text-xs font-bold text-slate-500 uppercase">Path</label><input id="conf-path" class="w-full border p-2.5 rounded-lg mt-1 text-sm bg-slate-100 text-slate-500 cursor-not-allowed" value="data/db_partner.json" readonly></div>
+                <button onclick="app.saveSettings()" class="w-full mt-2 bg-primary text-white py-3 rounded-xl font-bold hover:bg-blue-600">Simpan & Koneksi</button>
+                <button onclick="ui.closeModal('modal-settings')" class="w-full py-2 text-slate-400 text-xs hover:text-slate-600">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGIC -->
     <script>
-        // --- UTILS & IMAGE COMPRESSOR ---
+        // --- UTILS & IMAGE ENGINE ---
         const ut = {
             id: () => Date.now().toString(36) + Math.random().toString(36).substr(2),
-            formatRp: (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n),
-            // GitHub API safe encoder
+            fmtRp: (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n),
             b64Enc: (str) => btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (m, p1) => String.fromCharCode('0x' + p1))),
             b64Dec: (str) => decodeURIComponent(atob(str).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')),
             
-            // Image Preview
             previewImage: (input, imgId) => {
                 if (input.files && input.files[0]) {
                     const reader = new FileReader();
@@ -234,8 +391,8 @@
                 }
             },
 
-            // SMART COMPRESSOR: Resize image to max 800px width to save space
-            compressImage: (file) => {
+            // SMART COMPRESSOR (Mencegah Database Jebol)
+            compress: (file) => {
                 return new Promise((resolve) => {
                     if (!file) { resolve(null); return; }
                     const reader = new FileReader();
@@ -251,167 +408,164 @@
                             canvas.height = img.height * scaleSize;
                             const ctx = canvas.getContext('2d');
                             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                            // Compress to JPEG 0.7 quality
-                            resolve(canvas.toDataURL('image/jpeg', 0.7)); 
+                            resolve(canvas.toDataURL('image/jpeg', 0.6)); // Quality 60%
                         }
                     }
                 });
             }
         };
 
+        // --- STATE ---
         const state = {
-            // New Database Structure
             db: { assets: [], activities: [], finances: [] },
             sha: null,
-            config: { owner: localStorage.getItem('gh_owner')||'', repo: localStorage.getItem('gh_repo')||'', token: localStorage.getItem('gh_token')||'', path: 'data/db_partner.json' }
+            config: { 
+                owner: localStorage.getItem('gh_owner')||'', 
+                repo: localStorage.getItem('gh_repo')||'', 
+                token: localStorage.getItem('gh_token')||'', 
+                path: 'data/db_partner.json' 
+            },
+            ui: { multiSelect: false, selected: new Set() }
         };
-const app = {
+
+        // --- APP LOGIC ---
+        const app = {
             init: () => {
-                document.getElementById('current-date-log').innerText = dayjs().format('dddd, D MMMM YYYY');
                 if(state.config.token) app.syncData(); else ui.showSettings();
             },
 
-            // --- ASSET LOGIC ---
+            // ASSETS CRUD
             saveAsset: async (e) => {
                 e.preventDefault();
                 const id = document.getElementById('asset-id').value || ut.id();
-                const newData = {
+                const item = {
                     id, 
                     cat: document.querySelector('input[name="cat"]:checked').value,
                     loc: document.getElementById('asset-loc').value,
+                    brand: document.getElementById('asset-brand').value,
                     model: document.getElementById('asset-model').value,
+                    subtype: document.getElementById('asset-subtype').value,
                     cond: document.getElementById('asset-cond').value,
                     issue: document.getElementById('asset-issue').value,
-                    date: dayjs().format('YYYY-MM-DD')
+                    install: document.getElementById('asset-install').value,
+                    service: document.getElementById('asset-service').value,
+                    updated: new Date().toISOString()
                 };
-                
                 const idx = state.db.assets.findIndex(x => x.id === id);
-                if(idx >= 0) state.db.assets[idx] = newData; else state.db.assets.push(newData);
-                
-                ui.closeModal('modal-asset');
-                app.renderAssets();
-                app.pushToGitHub(`Update Aset: ${newData.loc}`);
+                if(idx >= 0) state.db.assets[idx] = item; else state.db.assets.push(item);
+                ui.closeModal('modal-asset'); app.renderAssets(); app.pushToGitHub(`Asset: ${item.loc}`);
             },
 
-            deleteAsset: (id) => {
-                if(confirm('Hapus aset ini?')) {
-                    state.db.assets = state.db.assets.filter(x => x.id !== id);
-                    app.renderAssets();
-                    app.pushToGitHub('Hapus Aset');
-                }
-            },
-// --- ACTIVITY LOGIC ---
+            // ACTIVITY CRUD
             saveActivity: async (e) => {
                 e.preventDefault();
-                // Button Loading State
                 const btn = e.target.querySelector('button[type="submit"]');
-                const oldText = btn.innerText; btn.innerText = "Compressing..."; btn.disabled = true;
+                const oldTxt = btn.innerText; btn.innerText = "Compressing Photo..."; btn.disabled = true;
 
-                const photoFile = document.getElementById('act-photo').files[0];
-                const photoBase64 = await ut.compressImage(photoFile); // Compress Logic
-
-                const act = {
+                const photo = await ut.compress(document.getElementById('act-photo').files[0]);
+                const item = {
                     id: ut.id(),
                     title: document.getElementById('act-title').value,
                     time: document.getElementById('act-time').value,
                     tag: document.getElementById('act-tag').value,
                     desc: document.getElementById('act-desc').value,
-                    img: photoBase64, // Simpan string gambar
+                    img: photo,
                     date: dayjs().format('YYYY-MM-DD')
                 };
-
-                state.db.activities.unshift(act); // Add to top
-                ui.closeModal('modal-activity');
-                app.renderActivity();
-                btn.innerText = oldText; btn.disabled = false;
-                app.pushToGitHub(`Log: ${act.title}`);
+                
+                if(!state.db.activities) state.db.activities = [];
+                state.db.activities.unshift(item);
+                ui.closeModal('modal-activity'); app.renderActivity(); 
+                btn.innerText = oldTxt; btn.disabled = false;
+                app.pushToGitHub(`Log: ${item.title}`);
             },
 
-            // --- FINANCE LOGIC ---
+            // FINANCE CRUD
             saveFinance: async (e) => {
                 e.preventDefault();
                 const btn = e.target.querySelector('button[type="submit"]');
-                btn.innerText = "Processing..."; btn.disabled = true;
+                const oldTxt = btn.innerText; btn.innerText = "Processing..."; btn.disabled = true;
 
-                const photoFile = document.getElementById('fin-photo').files[0];
-                const photoBase64 = await ut.compressImage(photoFile);
-
-                const fin = {
+                const photo = await ut.compress(document.getElementById('fin-photo').files[0]);
+                const item = {
                     id: ut.id(),
                     item: document.getElementById('fin-item').value,
                     cost: parseInt(document.getElementById('fin-cost').value),
-                    img: photoBase64,
-                    date: dayjs().format('YYYY-MM-DD')
+                    date: document.getElementById('fin-date').value,
+                    img: photo
                 };
 
-                state.db.finances.unshift(fin);
-                ui.closeModal('modal-finance');
-                app.renderFinance();
-                btn.innerText = oldText; btn.disabled = false;
-                app.pushToGitHub(`Belanja: ${fin.item}`);
+                if(!state.db.finances) state.db.finances = [];
+                state.db.finances.unshift(item);
+                ui.closeModal('modal-finance'); app.renderFinance();
+                btn.innerText = oldTxt; btn.disabled = false;
+                app.pushToGitHub(`Exp: ${item.item}`);
             },
+
+            // EXPORTS
+            downloadJSON: () => saveAs(new Blob([JSON.stringify(state.db, null, 2)], {type: "application/json"}), `Backup_${dayjs().format('YYYYMMDD')}.json`),
             
-            exportFinance: () => {
-                const data = state.db.finances.map(f => ({ Item: f.item, Harga: f.cost, Tgl: f.date }));
-                const ws = XLSX.utils.json_to_sheet(data);
-                const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Keuangan");
-                XLSX.writeFile(wb, `Laporan_Keuangan_${dayjs().format('YYYY-MM')}.xlsx`);
-            },
-// --- RENDERERS ---
-            renderAssets: () => {
-                const term = document.getElementById('searchAsset').value.toLowerCase();
-                const list = document.getElementById('asset-list');
-                const filtered = state.db.assets.filter(a => a.loc.toLowerCase().includes(term));
-                document.getElementById('stat-total-asset').innerText = state.db.assets.length;
-                list.innerHTML = filtered.map(a => `
-                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex justify-between items-start">
-                        <div>
-                            <div class="font-bold text-slate-800">${a.loc}</div>
-                            <div class="text-xs text-slate-500"><i class="fa-solid ${a.cat==='AC'?'fa-wind':'fa-lightbulb'}"></i> ${a.model||'-'}</div>
-                            <div class="mt-1 text-xs px-2 py-0.5 rounded inline-block ${a.cond==='Normal'?'bg-green-100 text-green-700':'bg-red-100 text-red-700'}">${a.cond}</div>
-                        </div>
-                        <button onclick="app.deleteAsset('${a.id}')" class="text-slate-300 hover:text-red-500"><i class="fa-solid fa-trash"></i></button>
-                    </div>`).join('');
+            downloadExcel: () => {
+                const wb = XLSX.utils.book_new();
+                // Sheet 1: Assets
+                const ws1 = XLSX.utils.json_to_sheet(state.db.assets.map((x,i)=>({No:i+1, Lokasi:x.loc, Kategori:x.cat, Merk:x.brand, Model:x.model, Kondisi:x.cond, Masalah:x.issue})));
+                XLSX.utils.book_append_sheet(wb, ws1, "Aset");
+                // Sheet 2: Activity
+                if(state.db.activities?.length) {
+                    const ws2 = XLSX.utils.json_to_sheet(state.db.activities.map(x=>({Tanggal:x.date, Jam:x.time, Kategori:x.tag, Kegiatan:x.title, Deskripsi:x.desc})));
+                    XLSX.utils.book_append_sheet(wb, ws2, "Jurnal");
+                }
+                // Sheet 3: Finance
+                if(state.db.finances?.length) {
+                    const ws3 = XLSX.utils.json_to_sheet(state.db.finances.map(x=>({Tanggal:x.date, Item:x.item, Biaya:x.cost})));
+                    XLSX.utils.book_append_sheet(wb, ws3, "Keuangan");
+                }
+                XLSX.writeFile(wb, `Laporan_TechPartner_${dayjs().format('YYYY-MM-DD')}.xlsx`);
             },
 
-            renderActivity: () => {
-                const list = document.getElementById('activity-list');
-                list.innerHTML = state.db.activities.map(a => `
-                    <div class="relative pl-8">
-                        <div class="timeline-line"></div>
-                        <div class="absolute left-0 top-0 w-8 text-xs font-bold text-slate-400 text-center">${a.time}</div>
-                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 relative z-10">
-                            <div class="flex justify-between mb-2">
-                                <span class="text-xs font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-600">${a.tag}</span>
-                                <span class="text-[10px] text-slate-400">${a.date}</span>
-                            </div>
-                            <h4 class="font-bold text-slate-800">${a.title}</h4>
-                            <p class="text-sm text-slate-600 mt-1 whitespace-pre-line">${a.desc}</p>
-                            ${a.img ? `<div class="mt-3"><img src="${a.img}" class="img-thumb" onclick="window.open(this.src)"></div>` : ''}
-                        </div>
-                    </div>`).join('');
-            },
-
-            renderFinance: () => {
-                const list = document.getElementById('finance-list');
-                const total = state.db.finances.reduce((acc, curr) => acc + (curr.cost || 0), 0);
-                document.getElementById('finance-total').innerText = ut.formatRp(total);
+            downloadPDF: () => {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('l', 'mm', 'a4');
+                doc.text(`Laporan TechPartner - ${dayjs().format('DD MMM YYYY')}`, 15, 15);
                 
-                list.innerHTML = state.db.finances.map(f => `
-                    <div class="receipt-card bg-white p-3 rounded-lg border border-slate-200 flex gap-3 items-center">
-                        ${f.img ? `<img src="${f.img}" class="w-12 h-12 rounded object-cover border cursor-pointer" onclick="window.open(this.src)">` : '<div class="w-12 h-12 bg-slate-100 rounded flex items-center justify-center text-slate-300"><i class="fa-solid fa-receipt"></i></div>'}
-                        <div class="flex-1">
-                            <div class="font-bold text-slate-800">${f.item}</div>
-                            <div class="text-xs text-slate-500">${f.date}</div>
-                        </div>
-                        <div class="font-mono font-bold text-emerald-600">${ut.formatRp(f.cost)}</div>
-                    </div>`).join('');
+                // Asset Table
+                doc.setFontSize(14); doc.text("Data Aset", 15, 25);
+                const rows = state.db.assets.map((x,i)=>[i+1, x.loc, x.cat, `${x.brand||''} ${x.model||''}`, x.cond, x.issue||'-']);
+                doc.autoTable({ startY: 30, head: [['No','Lokasi','Kat','Unit','Kondisi','Note']], body: rows });
+                
+                // Add Page for Activity if exists
+                if(state.db.activities?.length) {
+                    doc.addPage(); doc.text("Jurnal Kegiatan", 15, 15);
+                    const actRows = state.db.activities.map(x=>[x.date, x.time, x.tag, x.title, x.desc]);
+                    doc.autoTable({ startY: 20, head: [['Tgl','Jam','Tag','Kegiatan','Detail']], body: actRows });
+                }
+
+                doc.save(`Report_${dayjs().format('YYYYMMDD')}.pdf`);
             },
 
-            // --- SYNC ---
+            // BULK ACTIONS
+            toggleSelect: (id) => {
+                if(state.ui.selected.has(id)) state.ui.selected.delete(id); else state.ui.selected.add(id);
+                app.renderAssets(); ui.updateBulkCount();
+            },
+            bulkDelete: async () => {
+                if(!confirm(`Hapus ${state.ui.selected.size} item?`)) return;
+                state.db.assets = state.db.assets.filter(x => !state.ui.selected.has(x.id));
+                ui.toggleMultiSelect(); app.renderAssets(); app.pushToGitHub('Bulk Del');
+            },
+            bulkUpdateStatus: async (val) => {
+                state.db.assets.forEach(x => { if(state.ui.selected.has(x.id)) { x.cond = val; if(val==='Normal') x.issue=''; } });
+                ui.toggleMultiSelect(); app.renderAssets(); app.pushToGitHub('Bulk Upd');
+            },
+
+            // SYNC ENGINE
             saveSettings: () => {
-                state.config.owner = document.getElementById('conf-owner').value; state.config.repo = document.getElementById('conf-repo').value; state.config.token = document.getElementById('conf-token').value;
-                localStorage.setItem('gh_owner', state.config.owner); localStorage.setItem('gh_repo', state.config.repo); localStorage.setItem('gh_token', state.config.token);
+                state.config.owner = document.getElementById('conf-owner').value;
+                state.config.repo = document.getElementById('conf-repo').value;
+                state.config.token = document.getElementById('conf-token').value;
+                localStorage.setItem('gh_owner', state.config.owner);
+                localStorage.setItem('gh_repo', state.config.repo);
+                localStorage.setItem('gh_token', state.config.token);
                 ui.closeModal('modal-settings'); app.syncData();
             },
             syncData: async () => {
@@ -422,11 +576,11 @@ const app = {
                     if(res.ok) {
                         const json = await res.json(); state.sha = json.sha;
                         const data = JSON.parse(ut.b64Dec(json.content));
-                        state.db = { ...state.db, ...data }; // Merge structure
-                    } else if(res.status===404) { await app.pushToGitHub("Init Partner DB"); }
+                        state.db = {...state.db, ...data}; // Merge
+                    } else if(res.status===404) { await app.pushToGitHub("Init DB"); }
                     app.renderAssets(); app.renderActivity(); app.renderFinance();
                     badge.classList.replace('bg-yellow-500','bg-green-500');
-                } catch(e) { badge.classList.replace('bg-yellow-500','bg-red-500'); Swal.fire('Error', e.message, 'error'); }
+                } catch(e) { badge.classList.replace('bg-yellow-500','bg-red-500'); Swal.fire('Sync Error', e.message, 'error'); }
             },
             pushToGitHub: async (msg) => {
                 const {owner,repo,path,token} = state.config;
@@ -436,28 +590,144 @@ const app = {
                     const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, { method: 'PUT', headers: {'Authorization': `token ${token}`}, body: JSON.stringify(body) });
                     if(res.ok) { const json = await res.json(); state.sha = json.content.sha; badge.classList.replace('bg-yellow-500','bg-green-500'); }
                 } catch(e) { badge.classList.replace('bg-yellow-500','bg-red-500'); }
+            },
+
+            // RENDERING
+            renderAssets: () => {
+                const term = document.getElementById('searchAsset').value.toLowerCase();
+                const list = document.getElementById('asset-list');
+                const filtered = state.db.assets.filter(a => a.loc.toLowerCase().includes(term));
+                
+                document.getElementById('stat-total').innerText = state.db.assets.length;
+                document.getElementById('stat-normal').innerText = state.db.assets.filter(a=>a.cond==='Normal').length;
+                document.getElementById('stat-issue').innerText = state.db.assets.filter(a=>a.cond==='Rusak').length;
+                document.getElementById('stat-maintenance').innerText = state.db.assets.filter(a=>a.cond==='Perlu Servis').length;
+
+                list.innerHTML = filtered.map(a => {
+                    const isSel = state.ui.selected.has(a.id);
+                    const selBox = state.ui.multiSelect ? `<div class="absolute top-3 left-3 z-10" onclick="event.stopPropagation()"><input type="checkbox" ${isSel?'checked':''} onchange="app.toggleSelect('${a.id}')" class="w-5 h-5 rounded"></div>` : '';
+                    return `
+                    <div class="asset-card bg-white p-4 rounded-xl shadow-sm border border-slate-100 relative group hover:shadow-md ${isSel?'selected':''}" onclick="${state.ui.multiSelect?`app.toggleSelect('${a.id}')`:''}">
+                        ${selBox}
+                        <div class="flex justify-between items-start mb-2 ${state.ui.multiSelect?'pl-8':''}">
+                            <div><div class="font-bold text-slate-800">${a.loc}</div><div class="text-xs text-slate-500"><i class="fa-solid ${a.cat==='AC'?'fa-wind':'fa-lightbulb'}"></i> ${a.brand||'-'} ${a.model||''}</div></div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${a.cond==='Normal'?'bg-green-100 text-green-700':a.cond==='Rusak'?'bg-red-100 text-red-700':'bg-yellow-100 text-yellow-700'}">${a.cond}</span>
+                        </div>
+                        ${a.issue ? `<div class="bg-red-50 text-red-600 text-xs p-2 rounded border border-red-100 mb-2"><i class="fa-solid fa-triangle-exclamation"></i> ${a.issue}</div>` : '<div class="h-4 mb-2"></div>'}
+                        <div class="flex justify-between items-center text-xs text-slate-400 border-t pt-2">
+                            <span>Last Svc: ${a.service||'-'}</span>
+                            ${!state.ui.multiSelect ? `<button onclick="ui.editAsset('${a.id}')" class="text-primary font-bold hover:underline">Edit</button>` : ''}
+                        </div>
+                    </div>`;
+                }).join('');
+            },
+
+            renderActivity: () => {
+                const list = document.getElementById('activity-list');
+                const acts = state.db.activities || [];
+                if(acts.length === 0) { document.getElementById('empty-activity').classList.remove('hidden'); list.innerHTML = ''; return; }
+                
+                document.getElementById('empty-activity').classList.add('hidden');
+                // Group by Date logic could go here, for now simple list
+                list.innerHTML = acts.map(a => `
+                    <div class="relative pl-10">
+                        <div class="timeline-line"></div>
+                        <div class="absolute left-0 top-1 w-12 text-xs font-bold text-slate-400 text-right pr-4">${a.time}</div>
+                        <div class="absolute left-[19px] top-1.5 w-3 h-3 bg-white border-2 border-primary rounded-full z-10"></div>
+                        
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 relative z-10 hover:shadow-md transition">
+                            <div class="flex justify-between mb-1">
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded uppercase ${a.tag==='IT'?'bg-blue-50 text-blue-600':a.tag==='GA'?'bg-orange-50 text-orange-600':'bg-slate-100 text-slate-600'}">${a.tag}</span>
+                                <span class="text-[10px] text-slate-400">${a.date}</span>
+                            </div>
+                            <h4 class="font-bold text-slate-800 text-lg">${a.title}</h4>
+                            <p class="text-sm text-slate-600 mt-1 whitespace-pre-line">${a.desc}</p>
+                            ${a.img ? `<div class="mt-3"><img src="${a.img}" class="img-thumb" onclick="window.open(this.src)"></div>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            },
+
+            renderFinance: () => {
+                const list = document.getElementById('finance-list');
+                const fins = state.db.finances || [];
+                const total = fins.reduce((acc, curr) => acc + (curr.cost || 0), 0);
+                document.getElementById('finance-total').innerText = ut.fmtRp(total);
+
+                if(fins.length === 0) { document.getElementById('empty-finance').classList.remove('hidden'); list.innerHTML=''; return; }
+                document.getElementById('empty-finance').classList.add('hidden');
+
+                list.innerHTML = fins.map(f => `
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 receipt-pattern shadow-sm flex gap-4 items-start">
+                        <div class="w-16 h-16 bg-slate-50 rounded-lg flex-shrink-0 border flex items-center justify-center overflow-hidden">
+                            ${f.img ? `<img src="${f.img}" class="w-full h-full object-cover cursor-pointer" onclick="window.open(this.src)">` : '<i class="fa-solid fa-receipt text-slate-300 text-2xl"></i>'}
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex justify-between items-start">
+                                <h4 class="font-bold text-slate-800 text-lg">${f.item}</h4>
+                                <span class="font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded text-sm">${ut.fmtRp(f.cost)}</span>
+                            </div>
+                            <div class="text-xs text-slate-400 mt-1"><i class="fa-regular fa-calendar mr-1"></i> ${f.date}</div>
+                        </div>
+                    </div>
+                `).join('');
             }
         };
 
+        // --- UI MANAGER ---
         const ui = {
             switchTab: (t) => {
                 ['assets','activity','finance'].forEach(x => {
                     document.getElementById(`view-${x}`).classList.add('hidden');
-                    document.getElementById(`tab-${x}`).className = "flex-1 min-w-[100px] py-3 text-sm font-medium text-slate-500 hover:text-slate-800 border-b-2 border-transparent transition";
+                    document.getElementById(`tab-${x}`).classList.replace('border-primary','border-transparent');
+                    document.getElementById(`tab-${x}`).classList.replace('text-primary','text-slate-500');
                 });
                 document.getElementById(`view-${t}`).classList.remove('hidden');
-                document.getElementById(`tab-${t}`).className = "flex-1 min-w-[100px] py-3 text-sm font-bold border-b-2 border-primary text-primary transition";
+                document.getElementById(`tab-${t}`).classList.replace('border-transparent','border-primary');
+                document.getElementById(`tab-${t}`).classList.replace('text-slate-500','text-primary');
             },
-            showAssetModal: () => { document.getElementById('assetForm').reset(); document.getElementById('modal-asset').classList.remove('hidden'); document.getElementById('modal-asset').classList.add('flex'); },
-            showActivityModal: () => { document.getElementById('modal-activity').classList.remove('hidden'); document.getElementById('modal-activity').classList.add('flex'); },
-            showFinanceModal: () => { document.getElementById('modal-finance').classList.remove('hidden'); document.getElementById('modal-finance').classList.add('flex'); },
-            showSettings: () => { 
+            
+            showAssetModal: () => { document.getElementById('assetForm').reset(); document.getElementById('asset-id').value=''; document.getElementById('asset-modal-title').innerText='Tambah Aset'; ui.toggleFormType(); ui.toggleIssueField('Normal'); document.getElementById('modal-asset').classList.remove('hidden'); document.getElementById('modal-asset').classList.add('flex'); },
+            editAsset: (id) => { 
+                const a = state.db.assets.find(x=>x.id===id); if(!a)return; 
+                document.getElementById('asset-id').value=a.id; 
+                document.querySelector(`input[name="cat"][value="${a.cat}"]`).checked=true;
+                document.getElementById('asset-loc').value=a.loc; document.getElementById('asset-brand').value=a.brand; document.getElementById('asset-model').value=a.model;
+                document.getElementById('asset-cond').value=a.cond; document.getElementById('asset-issue').value=a.issue; 
+                document.getElementById('asset-install').value=a.install; document.getElementById('asset-service').value=a.service;
+                ui.toggleFormType(a.subtype); ui.toggleIssueField(a.cond); document.getElementById('asset-modal-title').innerText='Edit Aset'; document.getElementById('modal-asset').classList.remove('hidden'); document.getElementById('modal-asset').classList.add('flex');
+            },
+            
+            showActivityModal: () => { 
+                document.getElementById('act-title').value=''; document.getElementById('act-desc').value=''; document.getElementById('act-time').value=dayjs().format('HH:mm'); document.getElementById('act-photo').value=''; document.getElementById('act-preview').classList.add('hidden');
+                document.getElementById('modal-activity').classList.remove('hidden'); document.getElementById('modal-activity').classList.add('flex'); 
+            },
+            showFinanceModal: () => {
+                document.getElementById('fin-item').value=''; document.getElementById('fin-cost').value=''; document.getElementById('fin-date').value=dayjs().format('YYYY-MM-DD'); document.getElementById('fin-photo').value=''; document.getElementById('fin-preview').classList.add('hidden');
+                document.getElementById('modal-finance').classList.remove('hidden'); document.getElementById('modal-finance').classList.add('flex');
+            },
+            showSettings: () => {
                 document.getElementById('conf-owner').value = state.config.owner; document.getElementById('conf-repo').value = state.config.repo; document.getElementById('conf-token').value = state.config.token;
-                document.getElementById('modal-settings').classList.remove('hidden'); document.getElementById('modal-settings').classList.add('flex'); 
+                document.getElementById('modal-settings').classList.remove('hidden'); document.getElementById('modal-settings').classList.add('flex');
             },
-            closeModal: (id) => { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
+
+            closeModal: (id) => { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); },
+            toggleFormType: (sel) => {
+                const cat = document.querySelector('input[name="cat"]:checked').value; const el = document.getElementById('asset-subtype'); el.innerHTML='';
+                (cat==='AC'?['Split','Cassette','Standing','Central']:['LED Bulb','TL','Downlight','Spotlight']).forEach(o=>{const op=document.createElement('option');op.text=o;op.value=o;if(sel===o)op.selected=true;el.add(op)});
+            },
+            toggleIssueField: (val) => document.getElementById('asset-issue').classList.toggle('hidden', val==='Normal'),
+            
+            toggleMultiSelect: () => {
+                state.ui.multiSelect = !state.ui.multiSelect; state.ui.selected.clear();
+                const btn = document.getElementById('btn-multiselect'); const bar = document.getElementById('bulk-actions');
+                btn.classList.toggle('bg-slate-100', state.ui.multiSelect); btn.classList.toggle('border-primary', state.ui.multiSelect);
+                bar.classList.toggle('translate-y-full', !state.ui.multiSelect); app.renderAssets();
+            },
+            updateBulkCount: () => document.getElementById('selected-count').innerText = state.ui.selected.size
         };
 
+        // START
         document.addEventListener('DOMContentLoaded', app.init);
     </script>
 </body>
