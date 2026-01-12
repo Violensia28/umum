@@ -10,11 +10,12 @@
     <meta name="theme-color" content="#0f172a">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/900/900782.png">
 
-    <!-- CSS FRAMEWORK & ICONS (CORS FIXED) -->
+    <!-- EXTERNAL LIBRARIES (CDN) -->
+    <!-- Tailwind CSS (Crossorigin Fixed) -->
     <script src="https://cdn.tailwindcss.com" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- EXTERNAL LIBRARIES -->
+    <!-- Logic Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.7/dayjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.7/locale/id.min.js"></script>
@@ -24,8 +25,19 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
+    <script>
+        // Config Libraries
+        if (typeof dayjs !== 'undefined') dayjs.locale('id');
+        if (typeof tailwind !== 'undefined') {
+            tailwind.config = {
+                theme: { extend: { colors: { primary: '#0f172a', accent: '#2563eb', ai: '#7c3aed', success: '#059669', danger: '#dc2626', warning: '#d97706' } } }
+            }
+        }
+    </script>
+
     <style>
         body { font-family: 'Segoe UI', Inter, sans-serif; background-color: #f1f5f9; color: #334155; }
+        .hidden { display: none !important; }
         .asset-card { transition: all 0.2s; border-left: 4px solid transparent; }
         .asset-card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
         .status-normal { border-left-color: #059669; }
@@ -42,23 +54,23 @@
 </head>
 <body class="h-screen flex flex-col overflow-hidden relative">
 
-    <!-- HEADER / NAVBAR -->
-    <nav class="bg-[#0f172a] text-white px-6 py-4 flex justify-between items-center shadow-lg z-30 no-print">
+    <!-- NAVBAR -->
+    <nav class="bg-primary text-white px-6 py-4 flex justify-between items-center shadow-lg z-30 no-print">
         <div class="flex items-center gap-4">
-            <div class="bg-gradient-to-br from-blue-600 to-indigo-600 p-2 rounded-lg">
+            <div class="bg-gradient-to-br from-accent to-indigo-600 p-2 rounded-lg">
                 <i class="fa-solid fa-server text-white text-xl"></i>
             </div>
             <div>
-                <h1 class="font-bold text-xl leading-none tracking-tight">TechPartner <span class="text-blue-500 font-black">6.0</span></h1>
+                <h1 class="font-bold text-xl leading-none tracking-tight">TechPartner <span class="text-accent font-black">6.0</span></h1>
                 <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Operational Intel</p>
             </div>
         </div>
         <div class="flex gap-3 items-center">
-            <button onclick="ui.showModal('modal-ai')" class="hidden md:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 rounded-full text-xs font-bold border border-white/10">
+            <button onclick="ui.showModal('modal-ai')" class="hidden md:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-ai to-indigo-600 rounded-full text-xs font-bold border border-white/10">
                 <i class="fa-solid fa-wand-magic-sparkles"></i> AI Insight
             </button>
             <button onclick="app.syncData()" class="relative p-2 rounded-lg hover:bg-slate-800 transition">
-                <div id="sync-badge" class="w-2 h-2 bg-emerald-500 rounded-full absolute top-1 right-1 border border-[#0f172a]"></div>
+                <div id="sync-badge" class="w-2 h-2 bg-success rounded-full absolute top-1 right-1 border border-primary"></div>
                 <i class="fa-solid fa-cloud-arrow-up text-slate-400"></i>
             </button>
             <button onclick="ui.showModal('modal-settings')" class="p-2 rounded-lg hover:bg-slate-800 transition text-slate-400">
@@ -69,7 +81,7 @@
 
     <!-- TAB NAVIGATION -->
     <div class="bg-white border-b px-6 flex gap-2 md:gap-6 text-xs md:text-sm overflow-x-auto tab-nav no-print shadow-sm z-20">
-        <button onclick="ui.switchTab('dashboard')" id="tab-dashboard" class="py-4 border-b-2 border-blue-600 text-blue-600 font-bold px-4 whitespace-nowrap"><i class="fa-solid fa-gauge-high mr-2"></i>Dashboard</button>
+        <button onclick="ui.switchTab('dashboard')" id="tab-dashboard" class="py-4 border-b-2 border-accent text-accent font-bold px-4 whitespace-nowrap"><i class="fa-solid fa-gauge-high mr-2"></i>Dashboard</button>
         <button onclick="ui.switchTab('assets')" id="tab-assets" class="py-4 border-b-2 border-transparent text-slate-500 font-medium px-4 whitespace-nowrap"><i class="fa-solid fa-boxes-stacked mr-2"></i>Aset</button>
         <button onclick="ui.switchTab('wo')" id="tab-wo" class="py-4 border-b-2 border-transparent text-slate-500 font-medium px-4 whitespace-nowrap"><i class="fa-solid fa-screwdriver-wrench mr-2"></i>Work Order</button>
         <button onclick="ui.switchTab('activity')" id="tab-activity" class="py-4 border-b-2 border-transparent text-slate-500 font-medium px-4 whitespace-nowrap"><i class="fa-solid fa-list-check mr-2"></i>Log Kerja</button>
@@ -91,33 +103,33 @@
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 h-80 flex flex-col">
-                    <h3 class="font-bold text-slate-700 mb-4 text-sm"><i class="fa-solid fa-heart-pulse text-red-500 mr-2"></i>Kondisi Aset</h3>
+                    <h3 class="font-bold text-slate-700 mb-4 text-sm"><i class="fa-solid fa-heart-pulse text-danger mr-2"></i>Kondisi Aset</h3>
                     <div class="flex-1 flex items-center justify-center relative">
                         <canvas id="chart-asset-health"></canvas>
                     </div>
                 </div>
                 <div class="lg:col-span-2 bg-white p-6 rounded-3xl shadow-sm border border-slate-100 h-80">
-                    <h3 class="font-bold text-slate-700 mb-4 text-sm"><i class="fa-solid fa-chart-area text-blue-500 mr-2"></i>Tren Pengeluaran</h3>
+                    <h3 class="font-bold text-slate-700 mb-4 text-sm"><i class="fa-solid fa-chart-area text-accent mr-2"></i>Tren Pengeluaran</h3>
                     <div class="h-full pb-10"><canvas id="chart-finance-trend"></canvas></div>
                 </div>
             </div>
 
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="bg-blue-600 p-6 rounded-3xl text-white shadow-xl shadow-blue-500/20">
+                <div class="bg-accent p-6 rounded-3xl text-white shadow-xl shadow-blue-500/20">
                     <div class="text-[10px] font-bold uppercase opacity-70 mb-1 tracking-widest">Total Aset</div>
                     <div class="text-4xl font-black" id="dash-total-assets">0</div>
                 </div>
                 <div class="bg-white p-6 rounded-3xl border border-slate-100">
                     <div class="text-[10px] font-bold uppercase text-slate-400 mb-1 tracking-widest">Maintenance Due</div>
-                    <div class="text-4xl font-black text-orange-500" id="dash-maintenance">0</div>
+                    <div class="text-4xl font-black text-warning" id="dash-maintenance">0</div>
                 </div>
                 <div class="bg-white p-6 rounded-3xl border border-slate-100">
                     <div class="text-[10px] font-bold uppercase text-slate-400 mb-1 tracking-widest">WO Aktif</div>
-                    <div class="text-4xl font-black text-slate-800" id="dash-wo-active">0</div>
+                    <div class="text-4xl font-black text-primary" id="dash-wo-active">0</div>
                 </div>
                 <div class="bg-white p-6 rounded-3xl border border-slate-100">
                     <div class="text-[10px] font-bold uppercase text-slate-400 mb-1 tracking-widest">YTD Budget</div>
-                    <div class="text-xl font-black text-emerald-600 mt-2" id="dash-budget">Rp 0</div>
+                    <div class="text-xl font-black text-success mt-2" id="dash-budget">Rp 0</div>
                 </div>
             </div>
         </div>
@@ -127,9 +139,9 @@
             <div class="flex gap-4 sticky top-0 bg-slate-50/95 backdrop-blur z-10 py-3 items-center">
                 <div class="relative flex-1">
                     <i class="fa-solid fa-search absolute left-4 top-3.5 text-slate-400"></i>
-                    <input type="text" id="searchAsset" onkeyup="ui.renderAssets()" placeholder="Cari lokasi atau merk..." class="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl shadow-sm outline-none focus:border-blue-500">
+                    <input type="text" id="searchAsset" onkeyup="ui.renderAssets()" placeholder="Cari lokasi atau merk..." class="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl shadow-sm outline-none focus:border-accent">
                 </div>
-                <button onclick="app.showAssetModal()" class="px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-lg flex items-center gap-2">
+                <button onclick="app.showAssetModal()" class="px-6 py-3 bg-accent text-white rounded-xl text-sm font-bold shadow-lg flex items-center gap-2">
                     <i class="fa-solid fa-plus"></i> Tambah Aset
                 </button>
             </div>
@@ -138,13 +150,18 @@
 
         <!-- WORK ORDER VIEW -->
         <div id="view-wo" class="hidden max-w-4xl mx-auto space-y-6 pb-20">
-            <div class="flex justify-between items-center"><h2 class="text-2xl font-black">Antrean Kerja</h2><button onclick="app.showWOModal()" class="bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-bold"><i class="fa-solid fa-plus mr-2"></i>Buat Tiket</button></div>
+            <div class="flex justify-between items-center"><h2 class="text-2xl font-black">Antrean Kerja</h2><button onclick="app.showWOModal()" class="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold"><i class="fa-solid fa-plus mr-2"></i>Buat Tiket</button></div>
             <div id="wo-list" class="space-y-4"></div>
         </div>
 
         <!-- ACTIVITY LOG VIEW -->
         <div id="view-activity" class="hidden max-w-4xl mx-auto pb-20">
-            <div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-black">Log Kegiatan</h2><button onclick="ui.showModal('modal-activity')" class="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold">Tulis Log</button></div>
+            <div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-black">Log Kegiatan</h2><button onclick="ui.showModal('modal-activity')" class="bg-accent text-white px-5 py-2.5 rounded-xl text-sm font-bold">Tulis Log</button></div>
+            <div class="flex gap-2 mb-4 no-print">
+                 <input type="date" id="report-start" class="border p-2 rounded-xl text-xs">
+                 <input type="date" id="report-end" class="border p-2 rounded-xl text-xs">
+                 <button onclick="app.downloadWorkReport()" class="bg-red-50 text-red-600 px-4 rounded-xl font-bold text-xs"><i class="fa-solid fa-file-pdf"></i></button>
+            </div>
             <div id="activity-list" class="space-y-6 border-l-2 border-slate-200 ml-4 pl-8"></div>
         </div>
 
@@ -152,7 +169,7 @@
         <div id="view-finance" class="hidden max-w-3xl mx-auto pb-20">
             <div class="bg-white p-8 rounded-3xl border shadow-sm mb-8 flex justify-between items-center">
                 <div><p class="text-xs font-bold text-slate-400 uppercase">Total Pengeluaran</p><h2 class="text-4xl font-black" id="finance-total">Rp 0</h2></div>
-                <button onclick="ui.showModal('modal-finance')" class="bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold">Input Bon</button>
+                <button onclick="ui.showModal('modal-finance')" class="bg-success text-white px-8 py-3 rounded-xl font-bold">Input Bon</button>
             </div>
             <div id="finance-list" class="space-y-4"></div>
         </div>
@@ -160,37 +177,33 @@
     </main>
 
     <!-- FLOATING AI -->
-    <button id="ai-float-btn" onclick="ui.showModal('modal-ai')" class="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-full shadow-2xl z-40 flex items-center justify-center animate-bounce">
+    <button id="ai-float-btn" onclick="ui.showModal('modal-ai')" class="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-ai to-indigo-600 text-white rounded-full shadow-2xl z-40 flex items-center justify-center animate-bounce">
         <i class="fa-solid fa-robot text-2xl"></i>
     </button>
 
-    <!-- MODAL SECTION -->
-    <!-- SETTINGS MODAL -->
+    <!-- MODAL SETTINGS -->
     <div id="modal-settings" class="fixed inset-0 bg-slate-900/60 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
-            <div class="bg-slate-900 text-white p-6">
-                <h3 class="font-bold text-lg">Konfigurasi Cloud</h3>
-                <p class="text-xs text-slate-400">Database & AI Sync</p>
-            </div>
+            <div class="bg-primary text-white p-6"><h3 class="font-bold">Konfigurasi Cloud</h3></div>
             <div class="p-8 space-y-4">
-                <input id="conf-owner" class="w-full border-b p-2 text-sm outline-none focus:border-blue-600" placeholder="Username GitHub">
-                <input id="conf-repo" class="w-full border-b p-2 text-sm outline-none focus:border-blue-600" placeholder="Nama Repository">
-                <input type="password" id="conf-token" class="w-full border-b p-2 text-sm outline-none focus:border-blue-600" placeholder="GitHub Token (PAT)">
-                <input type="password" id="conf-gemini" class="w-full border-b p-2 text-sm outline-none focus:border-violet-600" placeholder="Gemini API Key">
-                <button onclick="app.saveSettings()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold mt-4">Hubungkan Sekarang</button>
+                <input id="conf-owner" class="w-full border-b p-2 text-sm outline-none focus:border-accent" placeholder="Username GitHub">
+                <input id="conf-repo" class="w-full border-b p-2 text-sm outline-none focus:border-accent" placeholder="Nama Repository">
+                <input type="password" id="conf-token" class="w-full border-b p-2 text-sm outline-none focus:border-accent" placeholder="GitHub Token (PAT)">
+                <input type="password" id="conf-gemini" class="w-full border-b p-2 text-sm outline-none focus:border-ai" placeholder="Gemini API Key">
+                <button onclick="app.saveSettings()" class="w-full bg-accent text-white py-4 rounded-xl font-bold mt-4">Simpan</button>
                 <button onclick="ui.closeModal('modal-settings')" class="w-full text-slate-400 text-sm font-medium">Batal</button>
             </div>
         </div>
     </div>
 
-    <!-- ASSET MODAL -->
+    <!-- MODAL ASSET -->
     <div id="modal-asset" class="fixed inset-0 bg-slate-900/60 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[95vh]">
             <div class="p-6 border-b flex justify-between items-center bg-slate-50">
                 <h3 class="font-bold text-lg text-slate-800">Data Master Aset</h3>
                 <button onclick="ui.closeModal('modal-asset')"><i class="fa-solid fa-times"></i></button>
             </div>
-            <form onsubmit="app.saveAsset(event)" class="p-8 space-y-4 overflow-y-auto">
+            <form onsubmit="app.saveAsset(event)" id="assetForm" class="p-8 space-y-4 overflow-y-auto">
                 <input type="hidden" id="asset-id">
                 <div class="grid grid-cols-2 gap-4">
                     <div><label class="text-[10px] font-bold uppercase text-slate-400">Lokasi</label><select id="asset-location" class="w-full border p-3 rounded-xl text-sm" required></select></div>
@@ -207,45 +220,129 @@
                         <option value="Rusak">❌ Rusak</option>
                     </select>
                 </div>
-                <div id="issue-container" class="hidden"><label class="text-[10px] font-bold uppercase text-slate-400">Detail Masalah</label><textarea id="asset-issue" class="w-full border p-3 rounded-xl text-sm h-20" placeholder="Jelaskan kendala..."></textarea></div>
+                <div id="issue-container" class="hidden">
+                    <label class="text-[10px] font-bold uppercase text-slate-400">Detail Masalah</label>
+                    <textarea id="asset-issue" class="w-full border p-3 rounded-xl text-sm h-20" placeholder="Jelaskan kendala..."></textarea>
+                    <button type="button" onclick="ai.diagnoseIssue()" class="mt-2 w-full bg-ai text-white py-2 rounded-lg text-xs font-bold"><i class="fa-solid fa-wand-magic-sparkles"></i> Analisa AI</button>
+                </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div><label class="text-[10px] font-bold uppercase text-slate-400">Instalasi</label><input type="date" id="asset-install" class="w-full border p-3 rounded-xl text-sm"></div>
                     <div><label class="text-[10px] font-bold uppercase text-slate-400">Terakhir Servis</label><input type="date" id="asset-service" class="w-full border p-3 rounded-xl text-sm"></div>
                 </div>
-                <button type="submit" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg">Simpan Aset</button>
+                <button type="submit" class="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg">Simpan Aset</button>
             </form>
         </div>
     </div>
 
-    <!-- AI CHAT MODAL -->
+    <!-- MODAL WO -->
+    <div id="modal-wo" class="fixed inset-0 bg-slate-900/60 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[95vh]">
+            <div class="p-6 border-b flex justify-between items-center bg-slate-50"><h3 class="font-bold">Buat Tiket WO</h3><button onclick="ui.closeModal('modal-wo')"><i class="fa-solid fa-times"></i></button></div>
+            <form onsubmit="app.saveWO(event)" id="woForm" class="p-8 space-y-4 overflow-y-auto">
+                <div><label class="text-[10px] font-bold uppercase text-slate-400">Aset</label><select id="wo-asset-id" class="w-full border p-3 rounded-xl text-sm" required></select></div>
+                <div><label class="text-[10px] font-bold uppercase text-slate-400">Judul</label><input id="wo-title" class="w-full border p-3 rounded-xl text-sm" required></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="text-[10px] font-bold uppercase text-slate-400">Prioritas</label><select id="wo-priority" class="w-full border p-3 rounded-xl text-sm"><option value="Low">Low</option><option value="Med" selected>Med</option><option value="High">High</option><option value="Critical">Critical</option></select></div>
+                    <div><label class="text-[10px] font-bold uppercase text-slate-400">Tipe</label><select id="wo-type" class="w-full border p-3 rounded-xl text-sm"><option value="Repair">Perbaikan</option><option value="Maintenance">Maintenance</option></select></div>
+                </div>
+                <textarea id="wo-desc" class="w-full border p-3 rounded-xl text-sm h-20" placeholder="Keterangan tambahan..."></textarea>
+                <button type="submit" class="w-full bg-primary text-white py-4 rounded-xl font-bold">Buat Tiket</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL FINISH WO -->
+    <div id="modal-finish-wo" class="fixed inset-0 bg-slate-900/60 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="p-6 bg-success text-white flex justify-between items-center"><h3 class="font-bold">Selesaikan Pekerjaan</h3><button onclick="ui.closeModal('modal-finish-wo')"><i class="fa-solid fa-times"></i></button></div>
+            <form onsubmit="app.finishWO(event)" class="p-8 space-y-4">
+                <div class="border-2 border-dashed p-6 text-center rounded-xl">
+                    <input type="file" id="wo-finish-photo" class="hidden">
+                    <label for="wo-finish-photo" class="cursor-pointer text-slate-400 text-xs font-bold block"><i class="fa-solid fa-camera text-2xl mb-2 block"></i>UPLOAD BUKTI FOTO</label>
+                </div>
+                <textarea id="wo-finish-notes" class="w-full border p-3 rounded-xl text-sm h-24" placeholder="Catatan teknisi..." required></textarea>
+                <button type="submit" class="w-full bg-success text-white py-4 rounded-xl font-bold">Selesai</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL AI CHAT -->
     <div id="modal-ai" class="fixed inset-0 bg-slate-900/90 hidden z-50 items-center justify-center p-4 backdrop-blur-md">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl flex flex-col h-[80vh] overflow-hidden">
-            <div class="bg-gradient-to-r from-violet-600 to-indigo-800 p-6 flex justify-between items-center text-white">
-                <div class="flex items-center gap-3"><i class="fa-solid fa-robot text-2xl animate-pulse"></i><div><h3 class="font-bold">Operations AI Assistant</h3><p class="text-[10px] opacity-70">Powered by Gemini 2.5 Flash</p></div></div>
+            <div class="bg-gradient-to-r from-ai to-indigo-800 p-6 flex justify-between items-center text-white">
+                <div class="flex items-center gap-3"><i class="fa-solid fa-robot text-2xl animate-pulse"></i><div><h3 class="font-bold">AI Assistant</h3><p class="text-[10px] opacity-70">Powered by Gemini 2.5 Flash</p></div></div>
                 <button onclick="ui.closeModal('modal-ai')"><i class="fa-solid fa-times text-xl"></i></button>
             </div>
             <div id="ai-chat-box" class="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50"></div>
             <div class="p-6 border-t flex gap-2">
-                <input type="text" id="ai-input" onkeypress="if(event.key==='Enter') ai.send()" class="flex-1 border px-6 py-4 rounded-full text-sm outline-none focus:ring-2 focus:ring-violet-500" placeholder="Tanyakan kondisi pemeliharaan atau diagnosa aset...">
-                <button onclick="ai.send()" class="bg-violet-600 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg"><i class="fa-solid fa-paper-plane"></i></button>
+                <input type="text" id="ai-input" onkeypress="if(event.key==='Enter') ai.send()" class="flex-1 border px-6 py-4 rounded-full text-sm outline-none focus:ring-2 focus:ring-ai" placeholder="Tanyakan kondisi aset...">
+                <button onclick="ai.send()" class="bg-ai text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg"><i class="fa-solid fa-paper-plane"></i></button>
             </div>
         </div>
     </div>
 
-    <!-- FINANCE MODAL -->
+    <!-- MODAL QR -->
+    <div id="modal-qr" class="fixed inset-0 bg-slate-900/60 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-xs text-center overflow-hidden">
+            <div id="qr-print-area" class="p-8 bg-white flex flex-col items-center">
+                <div id="qr-canvas" class="border p-2 rounded-xl mb-4"></div>
+                <h4 id="qr-title" class="font-bold"></h4>
+                <p id="qr-subtitle" class="text-xs text-slate-400 uppercase"></p>
+            </div>
+            <div class="flex border-t">
+                <button onclick="qr.print()" class="flex-1 py-4 font-bold hover:bg-slate-50">Print</button>
+                <button onclick="ui.closeModal('modal-qr')" class="flex-1 py-4 font-bold text-slate-400 hover:bg-slate-50">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL FINANCE -->
     <div id="modal-finance" class="fixed inset-0 bg-slate-900/60 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div class="p-6 bg-emerald-50 text-emerald-800 flex justify-between items-center font-bold"><h3>Input Pengeluaran</h3><button onclick="ui.closeModal('modal-finance')"><i class="fa-solid fa-times"></i></button></div>
+            <div class="p-6 bg-success text-white flex justify-between items-center font-bold"><h3>Input Pengeluaran</h3><button onclick="ui.closeModal('modal-finance')"><i class="fa-solid fa-times"></i></button></div>
             <form onsubmit="app.saveFinance(event)" class="p-8 space-y-4">
                 <div><label class="text-[10px] font-bold uppercase text-slate-400">Kebutuhan / Barang</label><input id="fin-item" class="w-full border p-3 rounded-xl text-sm" placeholder="Contoh: Pengisian Freon AC" required></div>
                 <div><label class="text-[10px] font-bold uppercase text-slate-400">Total Biaya</label><input type="number" id="fin-cost" class="w-full border p-3 rounded-xl text-sm font-bold" placeholder="0" required></div>
                 <div><label class="text-[10px] font-bold uppercase text-slate-400">Tanggal Transaksi</label><input type="date" id="fin-date" class="w-full border p-3 rounded-xl text-sm" required></div>
-                <button type="submit" class="w-full bg-emerald-600 text-white py-4 rounded-xl font-bold mt-4 shadow-lg">Simpan Pengeluaran</button>
+                <div class="border-2 border-dashed p-4 text-center rounded-xl relative">
+                    <input type="file" id="fin-photo" class="absolute inset-0 opacity-0 cursor-pointer">
+                    <label class="text-xs font-bold text-success cursor-pointer">UPLOAD NOTA</label>
+                </div>
+                <button type="submit" class="w-full bg-success text-white py-4 rounded-xl font-bold mt-4 shadow-lg">Simpan Pengeluaran</button>
             </form>
         </div>
     </div>
 
-    <!-- SCRIPT UTAMA (ALL-IN-ONE) -->
+    <!-- MODAL ACTIVITY -->
+    <div id="modal-activity" class="fixed inset-0 bg-slate-900/60 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div class="p-6 border-b font-bold flex justify-between"><h3>Catat Log</h3><button onclick="ui.closeModal('modal-activity')"><i class="fa-solid fa-times"></i></button></div>
+            <form onsubmit="app.saveActivity(event)" class="p-8 space-y-4">
+                <input id="act-title" class="w-full border p-3 rounded-xl font-bold" placeholder="Judul Kegiatan" required>
+                <div class="flex gap-2">
+                    <input type="time" id="act-time" class="border p-3 rounded-xl text-sm" required>
+                    <select id="act-tag" class="border p-3 rounded-xl text-sm flex-1"><option>Umum</option><option>IT</option><option>Facility</option></select>
+                </div>
+                <textarea id="act-desc" class="w-full border p-3 rounded-xl text-sm h-24" placeholder="Detail..."></textarea>
+                <div class="border-2 border-dashed p-4 text-center rounded-xl relative">
+                    <input type="file" id="act-photo" class="absolute inset-0 opacity-0 cursor-pointer">
+                    <label class="text-xs font-bold text-slate-400 cursor-pointer">FOTO DOKUMENTASI</label>
+                </div>
+                <button type="submit" class="w-full bg-accent text-white py-4 rounded-xl font-bold">Simpan Log</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- PWA -->
+    <script>
+        if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.protocol === 'http:')) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch(e => console.log('SW registration failed (expected in preview):', e));
+            });
+        }
+    </script>
+    
+    <!-- MAIN APP LOGIC (ALL-IN-ONE) -->
     <script type="module">
         // --- 1. STATE & SCHEMA ---
         const state = {
@@ -274,29 +371,57 @@
             id: () => Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
             fmtRp: (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n || 0),
             isOverdue: (date) => date ? dayjs(date).isBefore(dayjs(), 'day') : false,
+            // FIX Base64 untuk GitHub
             b64Enc: (str) => btoa(unescape(encodeURIComponent(str))),
-            b64Dec: (str) => decodeURIComponent(escape(atob(str)))
+            b64Dec: (str) => decodeURIComponent(escape(atob(str))),
+            compress: (file) => {
+                return new Promise((resolve) => {
+                    if(!file) return resolve(null);
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = (e) => {
+                        const img = new Image(); img.src = e.target.result;
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const max = 800;
+                            let w = img.width, h = img.height;
+                            if (w > h) { if (w > max) { h *= max / w; w = max; } } else { if (h > max) { w *= max / h; h = max; } }
+                            canvas.width = w; canvas.height = h;
+                            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                            resolve(canvas.toDataURL('image/jpeg', 0.7));
+                        };
+                    };
+                });
+            }
         };
 
         // --- 3. DATABASE (GITHUB API) ---
         const db = {
             url: () => `https://api.github.com/repos/${state.config.owner}/${state.config.repo}/contents/database.json`,
             sync: async () => {
-                if (!state.config.token) return { status: 'error' };
+                if (!state.config.token) return { status: 'error', message: 'Token missing' };
                 try {
                     const res = await fetch(db.url(), { headers: { 'Authorization': `token ${state.config.token}` }, cache: 'no-store' });
                     if (res.status === 404) return await db.push("Init DB");
                     const data = await res.json();
                     const content = JSON.parse(ut.b64Dec(data.content));
                     state.db.sha = data.sha;
-                    Object.assign(state.db, content);
+                    // Merge data
+                    state.db.assets = content.assets || [];
+                    state.db.work_orders = content.work_orders || [];
+                    state.db.activities = content.activities || [];
+                    state.db.finances = content.finances || [];
+                    state.db.meta = content.meta || state.db.meta;
                     return { status: 'success' };
-                } catch (e) { return { status: 'error' }; }
+                } catch (e) { return { status: 'error', message: e.message }; }
             },
             push: async (msg) => {
                 if (!state.config.token) return;
                 try {
-                    const content = ut.b64Enc(JSON.stringify(state.db));
+                    const content = ut.b64Enc(JSON.stringify({ 
+                        meta: state.db.meta, assets: state.db.assets, work_orders: state.db.work_orders, 
+                        activities: state.db.activities, finances: state.db.finances 
+                    }));
                     await fetch(db.url(), {
                         method: 'PUT',
                         headers: { 'Authorization': `token ${state.config.token}`, 'Content-Type': 'application/json' },
@@ -306,147 +431,161 @@
             }
         };
 
-        // --- 4. UI RENDERER ---
-        const ui = {
-            switchTab: (t) => {
-                ['dashboard','assets','wo','activity','finance'].forEach(x => {
-                    document.getElementById(`view-${x}`)?.classList.add('hidden');
-                    document.getElementById(`tab-${x}`)?.classList.remove('border-blue-600', 'text-blue-600', 'font-bold');
-                });
-                document.getElementById(`view-${t}`)?.classList.remove('hidden');
-                document.getElementById(`tab-${t}`)?.classList.add('border-blue-600', 'text-blue-600', 'font-bold');
-                if(t === 'dashboard') ui.renderDashboard();
-                if(t === 'assets') ui.renderAssets();
-                if(t === 'wo') ui.renderWO();
-                if(t === 'activity') ui.renderActivities();
-                if(t === 'finance') ui.renderFinance();
-            },
-            showModal: (id) => document.getElementById(id)?.classList.remove('hidden'),
-            closeModal: (id) => document.getElementById(id)?.classList.add('hidden'),
-            renderDashboard: () => {
-                document.getElementById('dash-total-assets').innerText = state.db.assets.length;
-                document.getElementById('dash-maintenance').innerText = state.db.assets.filter(a => a.cond !== 'Normal' || ut.isOverdue(a.service)).length;
-                document.getElementById('dash-wo-active').innerText = state.db.work_orders.filter(w => w.status !== 'DONE').length;
-                const totalFin = state.db.finances.reduce((a, b) => a + (b.cost || 0), 0);
-                document.getElementById('dash-budget').innerText = ut.fmtRp(totalFin);
-                ui.initCharts();
-            },
-            initCharts: () => {
-                const ctx = document.getElementById('chart-asset-health');
-                if(!ctx || typeof Chart === 'undefined') return;
-                if(window.tpChart) window.tpChart.destroy();
-                const normal = state.db.assets.filter(a => a.cond === 'Normal').length;
-                const rusak = state.db.assets.filter(a => a.cond === 'Rusak').length;
-                const servis = state.db.assets.filter(a => a.cond === 'Perlu Servis').length;
-                window.tpChart = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: { labels: ['Normal', 'Rusak', 'Servis'], datasets: [{ data: [normal, rusak, servis], backgroundColor: ['#059669', '#dc2626', '#d97706'] }] },
-                    options: { cutout: '75%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
-                });
-            },
-            renderAssets: () => {
-                const list = document.getElementById('asset-list');
-                if(!list) return;
-                list.innerHTML = state.db.assets.map(a => `
-                    <div class="asset-card bg-white p-5 rounded-3xl shadow-sm border border-slate-100 ${a.cond === 'Rusak' ? 'status-rusak' : (a.cond === 'Perlu Servis' || ut.isOverdue(a.service) ? 'status-servis' : 'status-normal')}">
-                        <div class="flex justify-between text-[10px] font-bold mb-2"><span class="bg-slate-100 px-2 py-1 rounded">${state.getTypeName(a.type_id)}</span><span class="uppercase">${a.cond}</span></div>
-                        <h4 class="font-bold text-slate-800 text-lg">${state.getLocationName(a.location_id)}</h4>
-                        <p class="text-xs text-slate-400 mb-4">${a.brand || '-'} ${a.model || ''}</p>
-                        <div class="flex justify-between border-t pt-3 items-center">
-                            <span class="text-[9px] text-slate-400 italic">Svc: ${a.service || 'N/A'}</span>
-                            <button onclick="app.editAsset('${a.id}')" class="text-blue-600 hover:text-blue-800"><i class="fa-solid fa-pen-to-square"></i></button>
-                        </div>
-                    </div>
-                `).join('');
-            },
-            renderWO: () => {
-                const list = document.getElementById('wo-list');
-                if(!list) return;
-                list.innerHTML = state.db.work_orders.map(w => `
-                    <div class="bg-white p-4 rounded-2xl border border-l-4 ${w.priority === 'Critical' ? 'border-l-red-600' : 'border-l-blue-500'} flex justify-between items-center">
-                        <div>
-                            <div class="text-[10px] font-bold text-slate-400 uppercase">${w.no} • ${w.status}</div>
-                            <div class="font-bold text-slate-800">${w.title}</div>
-                        </div>
-                        ${w.status !== 'DONE' ? `<button onclick="app.finishWO('${w.id}')" class="bg-slate-100 text-slate-700 px-4 py-2 rounded-lg text-xs font-bold">Selesai</button>` : `<span class="text-emerald-600 text-xs font-bold">OK</span>`}
-                    </div>
-                `).join('');
-            },
-            renderActivities: () => {
-                const list = document.getElementById('activity-list');
-                if(!list) return;
-                list.innerHTML = state.db.activities.map(a => `
-                    <div class="bg-white p-4 rounded-2xl shadow-sm">
-                        <div class="text-[10px] font-bold text-slate-400 mb-1">${dayjs(a.date).format('DD MMM YYYY')}</div>
-                        <div class="font-bold text-slate-800">${a.title}</div>
-                        <div class="text-xs text-slate-500">${a.desc}</div>
-                    </div>
-                `).join('');
-            },
-            renderFinance: () => {
-                const list = document.getElementById('finance-list');
-                if(!list) return;
-                const total = state.db.finances.reduce((a, b) => a + (b.cost || 0), 0);
-                document.getElementById('finance-total').innerText = ut.fmtRp(total);
-                list.innerHTML = state.db.finances.map(f => `
-                    <div class="bg-white p-4 rounded-xl border flex justify-between items-center">
-                        <div><div class="text-xs text-slate-400">${f.date}</div><div class="font-bold">${f.item}</div></div>
-                        <div class="font-mono font-bold text-emerald-600">${ut.fmtRp(f.cost)}</div>
-                    </div>
-                `).join('');
-            },
-            toggleIssueField: (val) => document.getElementById('issue-container')?.classList.toggle('hidden', val === 'Normal'),
-            populateDropdowns: () => {
-                const locs = state.db.master.locations.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
-                const typs = state.db.master.asset_types.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
-                const elLoc = document.getElementById('asset-location');
-                const elTyp = document.getElementById('asset-type');
-                if(elLoc) elLoc.innerHTML = locs;
-                if(elTyp) elTyp.innerHTML = typs;
+        // --- 4. MODULES (WO, AI, REPORT, QR) ---
+        const wo = {
+            create: (assetId, title, priority, desc, type) => {
+                const item = {
+                    id: 'wo_' + ut.id(),
+                    no: `WO/${dayjs().format('YYMM')}/${state.db.work_orders.length + 1}`,
+                    asset_id: assetId, title, desc, priority, type, status: 'OPEN',
+                    created_at: new Date().toISOString()
+                };
+                state.db.work_orders.unshift(item);
+                return item;
             }
         };
 
-        // --- 5. AI LOGIC ---
         const ai = {
             send: async () => {
                 const input = document.getElementById('ai-input');
                 const box = document.getElementById('ai-chat-box');
                 if(!input || !input.value.trim() || !state.config.gemini) return;
                 const userMsg = input.value; input.value = '';
-                box.innerHTML += `<div class="bg-blue-600 text-white p-3 rounded-2xl ml-auto max-w-[80%] text-sm mb-3">${userMsg}</div>`;
-                box.scrollTop = box.scrollHeight;
-
-                const context = `Status Aset: ${state.db.assets.length} total, ${state.db.assets.filter(a => a.cond === 'Rusak').length} rusak.`;
+                box.innerHTML += `<div class="bg-ai text-white p-3 rounded-2xl ml-auto max-w-[80%] text-sm mb-3">${userMsg}</div>`;
+                
+                const context = `Total Aset: ${state.db.assets.length}, Rusak: ${state.db.assets.filter(a=>a.cond==='Rusak').length}.`;
                 try {
                     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${state.config.gemini}`, {
                         method: 'POST',
-                        body: JSON.stringify({ contents: [{ parts: [{ text: userMsg }] }], systemInstruction: { parts: [{ text: `Anda asisten techpartner. Data: ${context}` }] } })
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ contents: [{ parts: [{ text: userMsg }] }], systemInstruction: { parts: [{ text: `Anda asisten operasional. Konteks: ${context}` }] } })
                     });
                     const result = await res.json();
-                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "Maaf, gagal memproses.";
-                    box.innerHTML += `<div class="bg-white border p-3 rounded-2xl mr-auto max-w-[80%] text-sm mb-3 shadow-sm">${marked.parse(text)}</div>`;
+                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "Gagal memproses.";
+                    box.innerHTML += `<div class="bg-white border p-3 rounded-2xl mr-auto max-w-[80%] text-sm mb-3 shadow-sm prose prose-sm">${marked.parse(text)}</div>`;
                 } catch(e) { console.error(e); }
                 box.scrollTop = box.scrollHeight;
+            },
+            diagnoseIssue: () => {
+                const brand = document.getElementById('asset-brand').value;
+                const issue = document.getElementById('asset-issue').value;
+                ui.showModal('modal-ai');
+                document.getElementById('ai-input').value = `Diagnosa kerusakan pada aset ${brand} dengan keluhan: ${issue}`;
+                ai.send();
             }
         };
 
-        // --- 6. REPORT LOGIC ---
+        const qr = {
+            show: (id) => {
+                const a = state.db.assets.find(x => x.id === id);
+                if(!a) return;
+                document.getElementById('qr-title').innerText = `${a.brand} ${a.model}`;
+                document.getElementById('qr-subtitle').innerText = state.getLocationName(a.location_id);
+                document.getElementById('qr-canvas').innerHTML = '';
+                new QRCode(document.getElementById('qr-canvas'), { text: JSON.stringify({i:a.id}), width: 128, height: 128 });
+                ui.showModal('modal-qr');
+            },
+            print: () => {
+                const content = document.getElementById('qr-print-area').innerHTML;
+                const win = window.open('','','width=600,height=600');
+                win.document.write(`<html><body style="text-align:center; font-family:sans-serif;">${content}</body></html>`);
+                win.document.close();
+                win.print();
+            }
+        };
+
         const report = {
             assetPDF: () => {
                 const doc = new jspdf.jsPDF();
-                doc.text("LAPORAN INVENTARIS ASET", 105, 15, null, 'center');
-                const rows = state.db.assets.map(a => [state.getLocationName(a.location_id), a.brand, a.cond]);
-                doc.autoTable({ startY: 25, head: [['Lokasi', 'Merk', 'Kondisi']], body: rows });
+                doc.text("LAPORAN ASET", 105, 15, null, 'center');
+                const rows = state.db.assets.map(a => [state.getLocationName(a.location_id), a.brand, a.model, a.cond]);
+                doc.autoTable({ startY: 25, head: [['Lokasi', 'Merk', 'Model', 'Kondisi']], body: rows });
                 doc.save('Laporan_Aset.pdf');
+            },
+            woPDF: () => { /* Logika PDF WO Sederhana */ }
+        };
+
+        // --- 5. UI RENDERER ---
+        const ui = {
+            switchTab: (t) => {
+                ['dashboard','assets','wo','activity','finance'].forEach(x => {
+                    document.getElementById(`view-${x}`)?.classList.add('hidden');
+                    document.getElementById(`tab-${x}`)?.classList.remove('border-accent', 'text-accent');
+                });
+                document.getElementById(`view-${t}`)?.classList.remove('hidden');
+                document.getElementById(`tab-${t}`)?.classList.add('border-accent', 'text-accent');
+                if(t==='dashboard') ui.renderDashboard();
+                if(t==='assets') ui.renderAssets();
+                if(t==='wo') ui.renderWO();
+                if(t==='activity') ui.renderActivities();
+                if(t==='finance') ui.renderFinance();
+            },
+            showModal: (id) => document.getElementById(id)?.classList.remove('hidden'),
+            closeModal: (id) => document.getElementById(id)?.classList.add('hidden'),
+            
+            renderDashboard: () => {
+                document.getElementById('dash-total-assets').innerText = state.db.assets.length;
+                document.getElementById('dash-maintenance').innerText = state.db.assets.filter(a => a.cond !== 'Normal').length;
+                document.getElementById('dash-wo-active').innerText = state.db.work_orders.filter(w => w.status !== 'DONE').length;
+                document.getElementById('dash-budget').innerText = ut.fmtRp(state.db.finances.reduce((a,b)=>a+(b.cost||0),0));
+                
+                const ctx = document.getElementById('chart-asset-health');
+                if(ctx && typeof Chart !== 'undefined') {
+                    if(window.tpChart) window.tpChart.destroy();
+                    const data = [state.db.assets.filter(a=>a.cond==='Normal').length, state.db.assets.filter(a=>a.cond==='Rusak').length, state.db.assets.filter(a=>a.cond==='Perlu Servis').length];
+                    window.tpChart = new Chart(ctx, { type: 'doughnut', data: { labels: ['Normal', 'Rusak', 'Servis'], datasets: [{ data, backgroundColor: ['#059669', '#dc2626', '#d97706'] }] } });
+                }
+            },
+            renderAssets: () => {
+                const list = document.getElementById('asset-list');
+                if(!list) return;
+                list.innerHTML = state.db.assets.map(a => `
+                    <div class="asset-card bg-white p-5 rounded-3xl shadow-sm border border-slate-100 ${a.cond==='Rusak'?'status-rusak':(a.cond==='Perlu Servis'?'status-servis':'status-normal')}">
+                        <div class="flex justify-between text-[10px] font-bold mb-2"><span class="bg-slate-100 px-2 py-1 rounded">${state.getTypeName(a.type_id)}</span><span class="uppercase">${a.cond}</span></div>
+                        <h4 class="font-bold text-slate-800 text-lg">${state.getLocationName(a.location_id)}</h4>
+                        <p class="text-xs text-slate-400 mb-4">${a.brand} ${a.model}</p>
+                        <div class="flex justify-between border-t pt-3">
+                            <button onclick="app.editAsset('${a.id}')" class="text-accent text-xs font-bold">EDIT</button>
+                            <button onclick="qr.show('${a.id}')" class="text-slate-400 text-xs"><i class="fa-solid fa-qrcode"></i></button>
+                        </div>
+                    </div>
+                `).join('');
+            },
+            renderWO: () => {
+                const list = document.getElementById('wo-list');
+                list.innerHTML = state.db.work_orders.map(w => `
+                    <div class="bg-white p-4 rounded-2xl border flex justify-between items-center">
+                        <div><div class="text-[10px] font-bold text-slate-400">${w.priority}</div><div class="font-bold">${w.title}</div></div>
+                        ${w.status!=='DONE' ? `<button onclick="app.finishWO('${w.id}')" class="bg-slate-100 px-3 py-1 rounded text-xs font-bold">Selesai</button>` : `<span class="text-success text-xs font-bold">OK</span>`}
+                    </div>
+                `).join('');
+            },
+            renderActivities: () => {
+                document.getElementById('activity-list').innerHTML = state.db.activities.map(a => `
+                    <div class="bg-white p-4 rounded-xl shadow-sm"><div class="text-[10px] font-bold text-slate-400">${dayjs(a.date).format('DD MMM')}</div><div class="font-bold">${a.title}</div></div>
+                `).join('');
+            },
+            renderFinance: () => {
+                document.getElementById('finance-list').innerHTML = state.db.finances.map(f => `
+                    <div class="bg-white p-4 rounded-xl border flex justify-between"><div><div class="font-bold">${f.item}</div><div class="text-xs text-slate-400">${f.date}</div></div><div class="font-mono text-success font-bold">${ut.fmtRp(f.cost)}</div></div>
+                `).join('');
+            },
+            toggleIssueField: (val) => document.getElementById('issue-container').classList.toggle('hidden', val==='Normal'),
+            populateDropdowns: () => {
+                const locs = state.db.master.locations.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+                const typs = state.db.master.asset_types.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+                document.getElementById('asset-location').innerHTML = locs;
+                document.getElementById('asset-type').innerHTML = typs;
+                document.getElementById('wo-asset-id').innerHTML = state.db.assets.map(a => `<option value="${a.id}">${a.brand}</option>`).join('');
             }
         };
 
-        // --- 7. MAIN APP CONTROLLER ---
+        // --- 6. MAIN APP CONTROLLER ---
         const app = {
             init: async () => {
                 if(state.config.token) {
-                    const res = await db.sync();
-                    if(res.status === 'success') console.log("DB Synced");
+                    await db.sync();
+                    console.log("DB Loaded");
                 } else {
                     ui.showModal('modal-settings');
                 }
@@ -454,35 +593,39 @@
                 ui.switchTab('dashboard');
             },
             saveSettings: () => {
-                const config = ['owner', 'repo', 'token', 'gemini'];
-                config.forEach(k => {
+                ['owner', 'repo', 'token', 'gemini'].forEach(k => {
                     const val = document.getElementById(`conf-${k}`).value;
                     state.config[k] = val;
-                    localStorage.setItem(`gh_${k === 'gemini' ? 'gemini_key' : k}`, val);
+                    localStorage.setItem(`gh_${k==='gemini'?'gemini_key':k}`, val);
                 });
                 ui.closeModal('modal-settings');
                 app.syncData();
             },
             syncData: async () => {
                 const res = await db.sync();
-                if(res.status === 'success') {
+                if(res.status==='success') {
                     ui.renderDashboard();
-                    Swal.fire({ icon: 'success', title: 'Data Sinkron', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
+                    Swal.fire({icon:'success', title:'Data Sinkron', toast:true, position:'top-end', showConfirmButton:false, timer:1500});
+                } else {
+                    Swal.fire('Gagal', res.message, 'error');
                 }
             },
             showAssetModal: () => {
+                document.getElementById('assetForm').reset();
                 document.getElementById('asset-id').value = '';
                 ui.populateDropdowns();
+                ui.toggleIssueField('Normal');
                 ui.showModal('modal-asset');
             },
             editAsset: (id) => {
                 const a = state.db.assets.find(x => x.id === id);
                 if(!a) return;
                 document.getElementById('asset-id').value = a.id;
-                document.getElementById('asset-brand').value = a.brand || '';
-                document.getElementById('asset-model').value = a.model || '';
+                document.getElementById('asset-brand').value = a.brand;
+                document.getElementById('asset-model').value = a.model;
                 document.getElementById('asset-cond').value = a.cond;
-                document.getElementById('asset-issue').value = a.issue || '';
+                document.getElementById('asset-issue').value = a.issue||'';
+                ui.toggleIssueField(a.cond);
                 ui.showModal('modal-asset');
             },
             saveAsset: async (e) => {
@@ -504,48 +647,56 @@
                 ui.closeModal('modal-asset');
                 ui.renderAssets();
                 ui.renderDashboard();
-                await db.push(`Update Aset: ${item.brand}`);
+                await db.push(`Update Asset ${item.brand}`);
             },
-            showWOModal: () => ui.showModal('modal-wo'),
+            showWOModal: () => {
+                ui.populateDropdowns();
+                ui.showModal('modal-wo');
+            },
             saveWO: async (e) => {
                 e.preventDefault();
-                const item = {
-                    id: 'wo_' + ut.id(),
-                    no: `WO/${dayjs().format('YYMM')}/${state.db.work_orders.length + 1}`,
-                    asset_id: document.getElementById('wo-asset-id').value,
-                    title: document.getElementById('wo-title').value,
-                    priority: document.getElementById('wo-priority').value,
-                    status: 'OPEN',
-                    created_at: new Date().toISOString()
-                };
-                state.db.work_orders.unshift(item);
+                const title = document.getElementById('wo-title').value;
+                wo.create(document.getElementById('wo-asset-id').value, title, document.getElementById('wo-priority').value, document.getElementById('wo-desc').value, document.getElementById('wo-type').value);
                 ui.closeModal('modal-wo');
                 ui.renderWO();
-                await db.push(`New WO: ${item.title}`);
+                await db.push(`New WO: ${title}`);
             },
             finishWO: async (id) => {
-                const w = state.db.work_orders.find(x => x.id === id);
-                if(w) w.status = 'DONE';
-                ui.renderWO();
-                await db.push(`WO Done: ${id}`);
+                const w = state.db.work_orders.find(x=>x.id===id);
+                if(w) { w.status = 'DONE'; ui.renderWO(); await db.push(`WO Done`); }
+                ui.closeModal('modal-finish-wo');
+            },
+            saveActivity: async (e) => {
+                e.preventDefault();
+                const file = document.getElementById('act-photo').files[0];
+                const img = file ? await ut.compress(file) : null;
+                const item = { id:ut.id(), title:document.getElementById('act-title').value, date:new Date().toISOString(), img };
+                state.db.activities.unshift(item);
+                ui.closeModal('modal-activity');
+                ui.renderActivities();
+                await db.push('Log Activity');
             },
             saveFinance: async (e) => {
                 e.preventDefault();
-                const item = {
-                    id: ut.id(),
-                    item: document.getElementById('fin-item').value,
-                    cost: parseInt(document.getElementById('fin-cost').value),
-                    date: document.getElementById('fin-date').value
-                };
+                const item = { id:ut.id(), item:document.getElementById('fin-item').value, cost:parseInt(document.getElementById('fin-cost').value), date:document.getElementById('fin-date').value };
                 state.db.finances.unshift(item);
                 ui.closeModal('modal-finance');
                 ui.renderFinance();
-                await db.push(`Expense: ${item.item}`);
-            }
+                ui.renderDashboard();
+                await db.push('Log Finance');
+            },
+            // Download Helper
+            downloadWorkReport: () => report.woPDF()
         };
 
-        // EXPOSE TO WINDOW FOR HTML ONCLICK
-        window.app = app; window.ui = ui; window.ai = ai; window.report = report;
+        // EXPOSE TO WINDOW
+        window.app = app;
+        window.ui = ui;
+        window.ai = ai;
+        window.qr = qr;
+        window.report = report;
+        
+        // Start App
         document.addEventListener('DOMContentLoaded', app.init);
     </script>
 </body>
