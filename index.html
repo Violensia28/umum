@@ -3,9 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="TechPartner 6.0: Asset Management System">
     <title>TechPartner 6.0: Ultimate Operations</title>
     
-    <!-- LIBRARIES -->
+    <!-- PWA MANIFEST (Wajib ada file manifest.json di folder root) -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/900/900782.png">
+
+    <!-- LIBRARIES (CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -17,23 +23,16 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
-    <!-- Docx Library (Versi Stabil untuk Browser) -->
     <script src="https://unpkg.com/docx@7.1.0/build/index.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-
+    
+    <!-- CONFIG -->
     <script>
         dayjs.locale('id'); 
         tailwind.config = {
             theme: { 
                 extend: { 
-                    colors: { 
-                        primary: '#0f172a', 
-                        accent: '#2563eb', 
-                        ai: '#7c3aed', 
-                        success: '#059669', 
-                        danger: '#dc2626',
-                        warning: '#d97706'
-                    },
+                    colors: { primary: '#0f172a', accent: '#2563eb', ai: '#7c3aed', success: '#059669', danger: '#dc2626', warning: '#d97706' },
                     animation: { 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
                 } 
             }
@@ -44,6 +43,8 @@
         .asset-card { transition: all 0.2s; border-left: 4px solid transparent; }
         .asset-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.1); }
         .asset-card.selected { border: 2px solid #2563eb; background-color: #eff6ff; }
+        
+        /* Status Borders */
         .status-normal { border-left-color: #059669; }
         .status-servis { border-left-color: #d97706; }
         .status-rusak { border-left-color: #dc2626; }
@@ -53,8 +54,6 @@
         .chat-bubble { padding: 10px 15px; border-radius: 12px; max-width: 85%; margin-bottom: 10px; font-size: 0.9rem; }
         .chat-user { background: #2563eb; color: white; align-self: flex-end; border-bottom-right-radius: 2px; margin-left: auto; }
         .chat-ai { background: white; border: 1px solid #e2e8f0; align-self: flex-start; border-bottom-left-radius: 2px; }
-        
-        .timeline-line { position: absolute; left: 24px; top: 0; bottom: 0; width: 2px; background: #e2e8f0; z-index: 0; }
         
         /* Print Styles */
         @media print {
@@ -81,27 +80,30 @@
         </div>
         
         <div class="flex gap-3 items-center">
-            <button onclick="ui.showAIModal()" class="hidden md:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-ai to-indigo-600 rounded-full hover:shadow-lg hover:shadow-violet-500/30 transition border border-white/10 group">
+            <!-- Tombol AI Desktop -->
+            <button onclick="ui.showModal('modal-ai')" class="hidden md:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-ai to-indigo-600 rounded-full hover:shadow-lg hover:shadow-violet-500/30 transition border border-white/10 group">
                 <i class="fa-solid fa-robot text-white group-hover:animate-bounce"></i>
                 <span class="text-xs font-bold">Asisten AI</span>
             </button>
             <div class="h-8 w-px bg-slate-700 mx-2"></div>
+            <!-- Sync Button -->
             <button onclick="app.syncData()" class="group relative px-3 py-2 rounded-lg hover:bg-slate-800 transition" title="Sync Cloud">
                 <div id="sync-badge" class="w-2 h-2 bg-success rounded-full absolute top-2 right-2"></div>
                 <i class="fa-solid fa-cloud text-slate-400 group-hover:text-white"></i>
             </button>
-            <button onclick="ui.showSettings()" class="p-2 rounded-lg hover:bg-slate-800 transition text-slate-400 hover:text-white"><i class="fa-solid fa-gear text-lg"></i></button>
+            <!-- Settings Button -->
+            <button onclick="ui.showModal('modal-settings')" class="p-2 rounded-lg hover:bg-slate-800 transition text-slate-400 hover:text-white"><i class="fa-solid fa-gear text-lg"></i></button>
         </div>
     </nav>
 
-    <!-- TABS -->
+    <!-- TABS NAVIGATION -->
     <div class="bg-white border-b px-6 flex gap-8 text-sm overflow-x-auto tab-nav no-print shadow-sm z-20">
         <button onclick="ui.switchTab('assets')" id="tab-assets" class="py-4 border-b-2 border-accent text-primary font-bold flex items-center gap-2 transition hover:bg-slate-50 px-4"><i class="fa-solid fa-boxes-stacked"></i> Aset & Maintenance</button>
         <button onclick="ui.switchTab('activity')" id="tab-activity" class="py-4 border-b-2 border-transparent text-slate-500 font-medium flex items-center gap-2 transition hover:text-slate-800 hover:bg-slate-50 px-4"><i class="fa-solid fa-list-check"></i> Laporan Kerja</button>
         <button onclick="ui.switchTab('finance')" id="tab-finance" class="py-4 border-b-2 border-transparent text-slate-500 font-medium flex items-center gap-2 transition hover:text-slate-800 hover:bg-slate-50 px-4"><i class="fa-solid fa-file-invoice-dollar"></i> Keuangan & Bon</button>
     </div>
 
-    <!-- MAIN CONTENT -->
+    <!-- MAIN CONTENT AREA -->
     <main class="flex-1 overflow-y-auto p-6 bg-slate-50 relative scroll-smooth">
         
         <!-- ================= VIEW 1: ASSETS ================= -->
@@ -109,7 +111,7 @@
             <div class="flex flex-col md:flex-row gap-4 mb-6 sticky top-0 bg-slate-50/95 backdrop-blur z-10 py-3 no-print items-center">
                 <div class="relative flex-1 w-full">
                     <i class="fa-solid fa-search absolute left-4 top-3.5 text-slate-400"></i>
-                    <input type="text" id="searchAsset" onkeyup="app.renderAssets()" placeholder="Cari aset (Lokasi, Merk, Masalah)..." class="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition">
+                    <input type="text" id="searchAsset" onkeyup="ui.renderAssets()" placeholder="Cari aset (Lokasi, Merk, Masalah)..." class="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition">
                 </div>
                 <div class="flex gap-2 w-full md:w-auto">
                      <div class="flex bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
@@ -117,7 +119,7 @@
                         <button onclick="app.downloadAssetReport('word')" class="px-3 py-2 text-blue-500 hover:bg-blue-50 rounded-lg transition" title="Download Word"><i class="fa-solid fa-file-word"></i></button>
                         <button onclick="app.downloadAssetReport('excel')" class="px-3 py-2 text-green-500 hover:bg-green-50 rounded-lg transition" title="Download Excel"><i class="fa-solid fa-file-excel"></i></button>
                      </div>
-                    <button onclick="ui.showAssetModal()" class="px-5 py-2 bg-accent text-white rounded-xl text-sm font-bold hover:bg-blue-600 shadow-lg transition"><i class="fa-solid fa-plus mr-2"></i> Tambah</button>
+                    <button onclick="app.showAssetModal()" class="px-5 py-2 bg-accent text-white rounded-xl text-sm font-bold hover:bg-blue-600 shadow-lg transition"><i class="fa-solid fa-plus mr-2"></i> Tambah</button>
                 </div>
             </div>
 
@@ -128,6 +130,8 @@
                 <div class="bg-white p-4 rounded-2xl border-b-4 border-danger shadow-sm"><div class="text-[10px] text-slate-400 font-bold uppercase">Rusak</div><div class="text-3xl font-black text-danger" id="stat-issue">0</div></div>
                 <div class="bg-white p-4 rounded-2xl border-b-4 border-warning shadow-sm"><div class="text-[10px] text-slate-400 font-bold uppercase">Perlu Servis</div><div class="text-3xl font-black text-warning" id="stat-maintenance">0</div></div>
             </div>
+            
+            <!-- LIST ASSET CONTAINER -->
             <div id="asset-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-20"></div>
         </div>
 
@@ -135,7 +139,7 @@
         <div id="view-activity" class="hidden max-w-5xl mx-auto pb-20">
             <div class="flex justify-between items-center mb-6 no-print">
                 <div><h2 class="text-2xl font-black text-slate-800">Laporan Kinerja</h2><p class="text-xs text-slate-500">Rekap harian teknisi & GA</p></div>
-                <button onclick="ui.showActivityModal()" class="px-5 py-2.5 bg-accent text-white rounded-xl text-sm font-bold shadow-lg hover:bg-blue-600 transition"><i class="fa-solid fa-pen-nib mr-2"></i> Input Kegiatan</button>
+                <button onclick="ui.showModal('modal-activity')" class="px-5 py-2.5 bg-accent text-white rounded-xl text-sm font-bold shadow-lg hover:bg-blue-600 transition"><i class="fa-solid fa-pen-nib mr-2"></i> Input Kegiatan</button>
             </div>
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-8 no-print flex flex-col md:flex-row gap-4 items-center justify-between">
                 <div class="flex gap-2 items-center w-full md:w-auto">
@@ -168,7 +172,7 @@
                         <button onclick="app.downloadFinanceReport('word')" class="bg-white/10 text-white hover:bg-white/20 px-3 py-2 rounded-lg transition" title="Export Word"><i class="fa-solid fa-file-word"></i></button>
                         <button onclick="app.downloadFinanceReport('excel')" class="bg-white/10 text-white hover:bg-white/20 px-3 py-2 rounded-lg transition" title="Export Excel"><i class="fa-solid fa-file-excel"></i></button>
                         <div class="w-px h-8 bg-white/20 mx-1"></div>
-                        <button onclick="ui.showFinanceModal()" class="bg-white text-slate-900 px-5 py-2 rounded-xl text-sm font-bold shadow hover:bg-slate-100 transition"><i class="fa-solid fa-plus mr-2"></i> Input Bon</button>
+                        <button onclick="ui.showModal('modal-finance')" class="bg-white text-slate-900 px-5 py-2 rounded-xl text-sm font-bold shadow hover:bg-slate-100 transition"><i class="fa-solid fa-plus mr-2"></i> Input Bon</button>
                     </div>
                 </div>
             </div>
@@ -179,9 +183,9 @@
     </main>
 
     <!-- FLOATING AI BUTTON -->
-    <button id="ai-float-btn" onclick="ui.showAIModal()" class="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-ai to-indigo-600 text-white rounded-full shadow-2xl z-50 flex items-center justify-center animate-bounce-slow border-2 border-white/20"><i class="fa-solid fa-robot text-2xl"></i></button>
+    <button id="ai-float-btn" onclick="ui.showModal('modal-ai')" class="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-ai to-indigo-600 text-white rounded-full shadow-2xl z-50 flex items-center justify-center animate-bounce-slow border-2 border-white/20"><i class="fa-solid fa-robot text-2xl"></i></button>
 
-    <!-- BULK ACTIONS -->
+    <!-- BULK ACTIONS BAR -->
     <div id="bulk-actions" class="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-lg z-40 transform translate-y-full transition-transform duration-300 flex justify-between items-center no-print">
         <div class="font-bold text-slate-700"><span class="bg-slate-100 px-3 py-1 rounded text-sm mr-2" id="selected-count">0</span>Item Dipilih</div>
         <div class="flex gap-2">
@@ -191,9 +195,9 @@
         </div>
     </div>
 
-    <!-- MODALS -->
+    <!-- ================== MODALS ================== -->
 
-    <!-- ASSET MODAL -->
+    <!-- ASSET MODAL (UPDATED FOR V2 DATA STRUCTURE) -->
     <div id="modal-asset" class="fixed inset-0 bg-slate-900/60 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[95vh]">
             <div class="p-5 border-b flex justify-between items-center bg-slate-50 rounded-t-2xl">
@@ -203,17 +207,28 @@
             <div class="p-6 overflow-y-auto">
                 <form id="assetForm" onsubmit="app.saveAsset(event)">
                     <input type="hidden" id="asset-id">
-                    <div class="grid grid-cols-2 gap-3 mb-4">
-                        <label class="cursor-pointer relative"><input type="radio" name="cat" value="AC" checked class="peer hidden" onchange="ui.toggleFormType()"><div class="peer-checked:bg-slate-800 peer-checked:text-white border border-slate-200 p-3 rounded-xl text-center hover:bg-slate-50 transition"><i class="fa-solid fa-wind text-xl mb-1 block"></i><span class="text-xs font-bold">AC</span></div></label>
-                        <label class="cursor-pointer relative"><input type="radio" name="cat" value="Light" class="peer hidden" onchange="ui.toggleFormType()"><div class="peer-checked:bg-yellow-500 peer-checked:text-white border border-slate-200 p-3 rounded-xl text-center hover:bg-slate-50 transition"><i class="fa-regular fa-lightbulb text-xl mb-1 block"></i><span class="text-xs font-bold">Lampu</span></div></label>
-                    </div>
                     <div class="space-y-4">
-                        <input id="asset-loc" class="w-full border p-3 rounded-lg text-sm outline-none focus:border-accent" placeholder="Lokasi (cth: Ruang Server)" required>
-                        <div class="flex gap-3">
-                            <input id="asset-brand" class="w-1/2 border p-3 rounded-lg text-sm outline-none" placeholder="Merk">
-                            <input id="asset-model" class="w-1/2 border p-3 rounded-lg text-sm outline-none" placeholder="Model/PK">
+                        <!-- New: Dropdown Lokasi & Tipe (Dinamis dari Master Data) -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-[10px] font-bold uppercase text-slate-400 mb-1">Lokasi</label>
+                                <select id="asset-location" class="w-full border p-2 rounded-lg text-sm bg-slate-50 outline-none focus:border-accent transition" required>
+                                    <option value="">Loading...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold uppercase text-slate-400 mb-1">Tipe Aset</label>
+                                <select id="asset-type" class="w-full border p-2 rounded-lg text-sm bg-slate-50 outline-none focus:border-accent transition" required>
+                                    <option value="">Loading...</option>
+                                </select>
+                            </div>
                         </div>
-                        <select id="asset-subtype" class="w-full border p-3 rounded-lg text-sm bg-white outline-none"></select>
+
+                        <div class="flex gap-3">
+                            <input id="asset-brand" class="w-1/2 border p-3 rounded-lg text-sm outline-none focus:border-accent transition" placeholder="Merk">
+                            <input id="asset-model" class="w-1/2 border p-3 rounded-lg text-sm outline-none focus:border-accent transition" placeholder="Model/PK">
+                        </div>
+                        
                         <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
                             <label class="text-[10px] font-bold uppercase text-slate-400 mb-2 block">Kondisi & Keluhan</label>
                             <select id="asset-cond" class="w-full border p-2.5 rounded-lg text-sm mb-2 outline-none" onchange="ui.toggleIssueField(this.value)">
@@ -223,7 +238,7 @@
                             </select>
                             <div id="issue-container" class="hidden">
                                 <textarea id="asset-issue" class="w-full border p-3 rounded-lg text-sm h-24 outline-none focus:border-red-400 bg-white mb-2" placeholder="Jelaskan kerusakan..."></textarea>
-                                <!-- AI MAGIC BUTTON -->
+                                <!-- Tombol AI Diagnosis -->
                                 <button type="button" onclick="ai.diagnoseIssue()" class="w-full py-2 bg-gradient-to-r from-ai to-purple-600 text-white rounded-lg text-xs font-bold hover:shadow-lg transition flex items-center justify-center gap-2 group">
                                     <i class="fa-solid fa-wand-magic-sparkles group-hover:animate-spin"></i> Cek Solusi via AI
                                 </button>
@@ -311,218 +326,19 @@
         </div>
     </div>
 
+    <!-- SERVICE WORKER REGISTRATION (PWA) -->
     <script>
-        // --- UTILS ---
-        const ut = {
-            id: () => Date.now().toString(36) + Math.random().toString(36).substr(2),
-            fmtRp: (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n),
-            b64Enc: (str) => btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (m, p1) => String.fromCharCode('0x' + p1))),
-            b64Dec: (str) => decodeURIComponent(atob(str).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')),
-            isOverdue: (dateStr) => dateStr ? dayjs().diff(dayjs(dateStr), 'day') > 90 : false,
-            previewImage: (input, imgId) => { if (input.files && input.files[0]) { const reader = new FileReader(); reader.onload = (e) => { const img = document.getElementById(imgId); img.src = e.target.result; img.classList.remove('hidden'); }; reader.readAsDataURL(input.files[0]); } },
-            compress: (file) => { return new Promise((resolve) => { if (!file) { resolve(null); return; } const reader = new FileReader(); reader.readAsDataURL(file); reader.onload = (event) => { const img = new Image(); img.src = event.target.result; img.onload = () => { const canvas = document.createElement('canvas'); const MAX_WIDTH = 800; const scaleSize = MAX_WIDTH / img.width; canvas.width = MAX_WIDTH; canvas.height = img.height * scaleSize; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height); resolve(canvas.toDataURL('image/jpeg', 0.6)); } } }); }
-        };
-
-        // --- STATE ---
-        const state = {
-            db: { assets: [], activities: [], finances: [] },
-            sha: null,
-            config: { owner: localStorage.getItem('gh_owner')||'', repo: localStorage.getItem('gh_repo')||'', token: localStorage.getItem('gh_token')||'', gemini: localStorage.getItem('gemini_key')||'', path: 'data/db_partner.json' },
-            ui: { multiSelect: false, selected: new Set() }
-        };
-
-        // --- AI MODULE ---
-        const ai = {
-            getContext: () => JSON.stringify({ total: state.db.assets.length, broken: state.db.assets.filter(a=>a.cond==='Rusak').map(a=>`${a.cat} ${a.brand} (${a.issue})`) }),
-            send: async () => {
-                const input = document.getElementById('ai-input'), btn = document.getElementById('ai-send-btn'), box = document.getElementById('ai-chat-box'), q = input.value.trim();
-                if (!q || !state.config.gemini) return Swal.fire('Error', 'API Key Gemini Missing', 'warning');
-                input.value = ''; btn.disabled = true; box.innerHTML += `<div class="chat-bubble chat-user">${q}</div>`;
-                try {
-                    const prompt = `Context: ${ai.getContext()}. User: ${q}. Jawab ringkas bahasa Indonesia.`;
-                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.config.gemini}`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({contents:[{parts:[{text:prompt}]}]}) });
-                    const data = await res.json(); box.innerHTML += `<div class="chat-bubble chat-ai">${marked.parse(data.candidates[0].content.parts[0].text)}</div>`;
-                } catch (e) { box.innerHTML += `<div class="chat-bubble chat-ai text-red-500">Error.</div>`; }
-                box.scrollTop = box.scrollHeight; btn.disabled = false;
-            },
-            diagnoseIssue: async () => {
-                if (!state.config.gemini) return Swal.fire('Error', 'API Key Kosong', 'warning');
-                const issue = document.getElementById('asset-issue').value, type = document.querySelector('input[name="cat"]:checked').value, brand = document.getElementById('asset-brand').value;
-                if(!issue) return Swal.fire('Info', 'Isi keluhan dulu', 'info');
-                Swal.showLoading();
-                try {
-                    const prompt = `Sebagai teknisi senior, berikan solusi perbaikan singkat untuk ${type} ${brand} dengan masalah: "${issue}". Sertakan estimasi kesulitan (1-10).`;
-                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.config.gemini}`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({contents:[{parts:[{text:prompt}]}]}) });
-                    const data = await res.json();
-                    Swal.fire({ title: 'Analisa AI', html: `<div class="text-left text-sm whitespace-pre-line">${marked.parse(data.candidates[0].content.parts[0].text)}</div>`, icon: 'info', width: '600px' });
-                } catch (e) { Swal.fire('Error', 'Gagal koneksi AI', 'error'); }
-            }
-        };
-
-        // --- CORE APP ---
-        const app = {
-            init: () => { if(state.config.token) app.syncData(); else ui.showSettings(); app.initDates(); },
-            initDates: () => { 
-                const s = dayjs().startOf('week').add(1,'day').format('YYYY-MM-DD'), e = dayjs().endOf('week').add(1,'day').format('YYYY-MM-DD');
-                document.getElementById('report-start').value = s; document.getElementById('report-end').value = e;
-            },
-            
-            // --- NEW: UNIVERSAL EXPORT LOGIC ---
-            downloadAssetReport: (type) => {
-                const data = state.db.assets.map((x,i)=>({No:i+1, Lokasi:x.loc, Tipe:x.cat, Merk:x.brand, Kondisi:x.cond, Masalah:x.issue||'-'}));
-                if(type === 'excel') { const wb=XLSX.utils.book_new(), ws=XLSX.utils.json_to_sheet(data); XLSX.utils.book_append_sheet(wb, ws, "Aset"); XLSX.writeFile(wb, "Data_Aset.xlsx"); }
-                else if(type === 'word') app.generateWord(data, "Laporan Aset");
-                else app.generateSmartReport(); // Existing PDF Logic
-            },
-
-            downloadWorkReport: (type) => {
-                const s = document.getElementById('report-start').value, e = document.getElementById('report-end').value;
-                const acts = state.db.activities.filter(a => dayjs(a.date).isAfter(dayjs(s).subtract(1,'day')) && dayjs(a.date).isBefore(dayjs(e).add(1,'day')));
-                if(acts.length===0) return Swal.fire('Info','Data kosong','info');
-                
-                if(type === 'excel') { 
-                    const data = acts.map(a=>({Tanggal:a.date, Jam:a.time, Kat:a.tag, Kegiatan:a.title, Desc:a.desc}));
-                    const wb=XLSX.utils.book_new(), ws=XLSX.utils.json_to_sheet(data); XLSX.utils.book_append_sheet(wb, ws, "Laporan"); XLSX.writeFile(wb, `Laporan_${s}_${e}.xlsx`);
-                } else if (type === 'word') {
-                    app.generateWord(acts.map(a=>({Tanggal:a.date, Kegiatan:a.title, Desc:a.desc})), "Laporan Kegiatan");
-                } else { // PDF with Photos
-                    const doc = new window.jspdf.jsPDF(); doc.text("Laporan Kegiatan", 14, 20);
-                    const rows = acts.map(a => [dayjs(a.date).format('DD/MM'), a.time, a.tag, a.title, a.desc, '']);
-                    doc.autoTable({ startY:30, head:[['Tgl','Jam','Kat','Judul','Ket','Foto']], body:rows, columnStyles:{5:{cellWidth:25}}, bodyStyles:{minCellHeight:20}, 
-                        didDrawCell:(d)=>{ if(d.column.index===5 && d.section==='body' && acts[d.row.index].img) try{doc.addImage(acts[d.row.index].img,'JPEG',d.cell.x+2,d.cell.y+2,20,16)}catch(e){} } 
-                    });
-                    doc.save(`Laporan_${s}.pdf`);
-                }
-            },
-
-            downloadFinanceReport: (type) => {
-                const fins = state.db.finances;
-                if(type === 'excel') {
-                    const data = fins.map(f=>({Tanggal:f.date, Item:f.item, Biaya:f.cost}));
-                    const wb=XLSX.utils.book_new(), ws=XLSX.utils.json_to_sheet(data); XLSX.utils.book_append_sheet(wb, ws, "Keuangan"); XLSX.writeFile(wb, "Keuangan.xlsx");
-                } else if(type === 'word') {
-                    app.generateWord(fins.map(f=>({Tanggal:f.date, Item:f.item, Biaya:ut.fmtRp(f.cost)})), "Laporan Keuangan");
-                } else { // PDF With Receipts
-                    const doc = new window.jspdf.jsPDF(); doc.text("Laporan Keuangan & Bon", 14, 20);
-                    const rows = fins.map(f => [dayjs(f.date).format('DD MMM YYYY'), f.item, ut.fmtRp(f.cost), '']);
-                    doc.autoTable({ startY:30, head:[['Tanggal','Item','Biaya','Foto Bon']], body:rows, columnStyles:{3:{cellWidth:35}}, bodyStyles:{minCellHeight:30},
-                        didDrawCell:(d)=>{ if(d.column.index===3 && d.section==='body' && fins[d.row.index].img) try{doc.addImage(fins[d.row.index].img,'JPEG',d.cell.x+2,d.cell.y+2,30,26)}catch(e){} }
-                    });
-                    doc.save("Laporan_Keuangan.pdf");
-                }
-            },
-
-            // Helper for Word (Simple Text Table)
-            generateWord: (data, title) => {
-                const { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType } = window.docx;
-                const headers = Object.keys(data[0]);
-                const table = new Table({
-                    rows: [
-                        new TableRow({ children: headers.map(h => new TableCell({ children: [new Paragraph({text:h, bold:true})], shading:{fill:"EFEFEF"} })) }),
-                        ...data.map(row => new TableRow({ children: headers.map(h => new TableCell({ children: [new Paragraph(String(row[h]))] })) }))
-                    ], width: { size: 100, type: WidthType.PERCENTAGE }
-                });
-                const doc = new Document({ sections: [{ children: [new Paragraph({text:title, heading:"Heading1"}), table] }] });
-                Packer.toBlob(doc).then(blob => saveAs(blob, `${title}.docx`));
-            },
-
-            generateSmartReport: () => {
-                const doc = new window.jspdf.jsPDF();
-                doc.setFillColor(15, 23, 42); doc.rect(0, 0, 210, 30, 'F'); doc.setTextColor(255); doc.text("Laporan Aset Eksekutif", 105, 18, null, null, "center");
-                const rows = state.db.assets.map((x,i)=>[i+1, x.loc, `${x.brand} ${x.model}`, x.cond, x.service||'-']);
-                doc.autoTable({ startY: 40, head: [['No', 'Lokasi', 'Model', 'Kondisi', 'Last Svc']], body: rows, theme: 'striped' });
-                doc.save("Aset_Eksekutif.pdf");
-            },
-
-            // --- CRUD OPS ---
-            saveAsset: async (e) => {
-                e.preventDefault(); const id = document.getElementById('asset-id').value || ut.id();
-                const item = { id, cat: document.querySelector('input[name="cat"]:checked').value, loc: document.getElementById('asset-loc').value, brand: document.getElementById('asset-brand').value, model: document.getElementById('asset-model').value, subtype: document.getElementById('asset-subtype').value, cond: document.getElementById('asset-cond').value, issue: document.getElementById('asset-issue').value, install: document.getElementById('asset-install').value, service: document.getElementById('asset-service').value };
-                const idx = state.db.assets.findIndex(x => x.id === id); if(idx >= 0) state.db.assets[idx] = item; else state.db.assets.push(item);
-                ui.closeModal('modal-asset'); app.renderAssets(); app.pushToGitHub(`Asset: ${item.loc}`);
-            },
-            saveActivity: async (e) => {
-                e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.innerText="Processing..."; btn.disabled=true;
-                const photo = await ut.compress(document.getElementById('act-photo').files[0]);
-                const item = { id: ut.id(), title: document.getElementById('act-title').value, time: document.getElementById('act-time').value, tag: document.getElementById('act-tag').value, desc: document.getElementById('act-desc').value, img: photo, date: dayjs().format('YYYY-MM-DD') };
-                state.db.activities.unshift(item); ui.closeModal('modal-activity'); app.renderActivities(); btn.innerText="Simpan Log"; btn.disabled=false; app.pushToGitHub(`Log: ${item.title}`);
-            },
-            saveFinance: async (e) => {
-                e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.innerText="Processing..."; btn.disabled=true;
-                const photo = await ut.compress(document.getElementById('fin-photo').files[0]);
-                const item = { id: ut.id(), item: document.getElementById('fin-item').value, cost: parseInt(document.getElementById('fin-cost').value), date: document.getElementById('fin-date').value, img: photo };
-                state.db.finances.unshift(item); ui.closeModal('modal-finance'); app.renderFinance(); btn.innerText="Simpan"; btn.disabled=false; app.pushToGitHub(`Fin: ${item.item}`);
-            },
-            syncData: async () => {
-                const {owner,repo,path,token} = state.config; if(!token) return;
-                try {
-                    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, { headers: {'Authorization': `token ${token}`} });
-                    if(res.ok) { const json = await res.json(); state.sha = json.sha; state.db = {...state.db, ...JSON.parse(ut.b64Dec(json.content))}; }
-                    app.renderAssets(); app.renderActivities(); app.renderFinance();
-                } catch(e) {}
-            },
-            pushToGitHub: async (msg) => {
-                const {owner,repo,path,token} = state.config;
-                try { await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, { method: 'PUT', headers: {'Authorization': `token ${token}`}, body: JSON.stringify({ message: msg, content: ut.b64Enc(JSON.stringify(state.db)), sha: state.sha }) }); } catch(e){}
-            },
-            saveSettings: () => {
-                state.config.owner = document.getElementById('conf-owner').value; state.config.repo = document.getElementById('conf-repo').value; state.config.token = document.getElementById('conf-token').value; state.config.gemini = document.getElementById('conf-gemini').value;
-                localStorage.setItem('gh_owner', state.config.owner); localStorage.setItem('gh_repo', state.config.repo); localStorage.setItem('gh_token', state.config.token); localStorage.setItem('gemini_key', state.config.gemini);
-                ui.closeModal('modal-settings'); app.syncData();
-            },
-
-            // --- RENDERERS ---
-            renderAssets: () => {
-                const term = document.getElementById('searchAsset').value.toLowerCase(), list = document.getElementById('asset-list'), filtered = state.db.assets.filter(a => a.loc.toLowerCase().includes(term));
-                document.getElementById('stat-total').innerText = state.db.assets.length; document.getElementById('stat-overdue').innerText = state.db.assets.filter(a => ut.isOverdue(a.service)).length; document.getElementById('stat-normal').innerText = state.db.assets.filter(a=>a.cond==='Normal').length; document.getElementById('stat-issue').innerText = state.db.assets.filter(a=>a.cond==='Rusak').length; document.getElementById('stat-maintenance').innerText = state.db.assets.filter(a=>a.cond==='Perlu Servis').length;
-                list.innerHTML = filtered.map(a => {
-                    const isOverdue = ut.isOverdue(a.service), isSel = state.ui.selected.has(a.id);
-                    return `<div class="asset-card bg-white p-5 rounded-xl shadow-sm border border-slate-100 relative group ${isSel?'selected':''} ${a.cond==='Rusak'?'status-rusak':a.cond==='Perlu Servis'?'status-servis':isOverdue?'status-overdue':'status-normal'}" onclick="${state.ui.multiSelect?`app.toggleSelect('${a.id}')`:''}">
-                        ${state.ui.multiSelect ? `<div class="absolute top-3 right-3"><input type="checkbox" ${isSel?'checked':''} class="w-5 h-5 accent-accent"></div>` : ''}
-                        <div class="flex justify-between items-start mb-3"><div class="bg-slate-100 p-2 rounded-lg text-slate-500"><i class="fa-solid ${a.cat==='AC'?'fa-wind':'fa-lightbulb'} text-xl"></i></div>${isOverdue&&a.cond==='Normal'?'<span class="px-2 py-1 bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded uppercase">Telat Servis</span>':a.cond!=='Normal'?`<span class="px-2 py-1 rounded text-[10px] font-bold uppercase ${a.cond==='Rusak'?'bg-red-100 text-red-700':'bg-amber-100 text-amber-700'}">${a.cond}</span>`:''}</div>
-                        <h4 class="font-bold text-slate-800 text-lg leading-tight mb-1">${a.loc}</h4><p class="text-sm text-slate-500 mb-3">${a.brand||'-'} ${a.model||''}</p>${a.issue ? `<div class="bg-red-50 text-red-600 text-xs p-2 rounded border border-red-100 mb-3"><i class="fa-solid fa-triangle-exclamation mr-1"></i> ${a.issue}</div>` : ''}
-                        <div class="flex items-center gap-2 text-xs text-slate-400 border-t pt-3"><i class="fa-regular fa-calendar-check"></i><span>Servis: ${a.service ? dayjs(a.service).format('DD MMM') : 'Belum'}</span></div>
-                        ${!state.ui.multiSelect ? `<button onclick="ui.editAsset('${a.id}')" class="absolute bottom-3 right-3 text-accent hover:text-blue-700"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
-                    </div>`;
-                }).join('');
-            },
-            renderActivities: () => {
-                const list = document.getElementById('activity-list'), acts = state.db.activities;
-                if(acts.length===0){document.getElementById('empty-activity').classList.remove('hidden'); list.innerHTML=''; return;}
-                document.getElementById('empty-activity').classList.add('hidden');
-                list.innerHTML = acts.map(a => `<div class="relative pl-8 pb-8 border-l-2 border-slate-200 last:border-0 last:pb-0"><div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-white border-2 border-accent"></div><div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition"><div class="flex justify-between items-start mb-2"><div><span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">${dayjs(a.date).format('DD MMM YYYY')} • ${a.time}</span><h4 class="font-bold text-slate-800 text-lg">${a.title}</h4></div><span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded">${a.tag}</span></div><p class="text-sm text-slate-600 whitespace-pre-line mb-3">${a.desc}</p>${a.img ? `<img src="${a.img}" class="h-24 rounded border cursor-pointer hover:opacity-90" onclick="window.open(this.src)">` : ''}</div></div>`).join('');
-            },
-            renderFinance: () => {
-                const list = document.getElementById('finance-list'), fins = state.db.finances;
-                document.getElementById('finance-total').innerText = ut.fmtRp(fins.reduce((acc,c)=>acc+(c.cost||0),0));
-                if(fins.length===0){document.getElementById('empty-finance').classList.remove('hidden'); list.innerHTML=''; return;}
-                document.getElementById('empty-finance').classList.add('hidden');
-                list.innerHTML = fins.map(f => `<div class="bg-white p-4 rounded-xl border border-slate-200 flex gap-4 items-center shadow-sm"><div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center flex-shrink-0">${f.img ? `<img src="${f.img}" class="w-full h-full object-cover rounded-full cursor-pointer" onclick="window.open(this.src)">` : '<i class="fa-solid fa-receipt"></i>'}</div><div class="flex-1"><div class="flex justify-between"><h4 class="font-bold text-slate-800">${f.item}</h4><span class="font-mono font-bold text-emerald-600">${ut.fmtRp(f.cost)}</span></div><div class="text-xs text-slate-400">${dayjs(f.date).format('DD MMM YYYY')}</div></div></div>`).join('');
-            },
-            
-            toggleSelect: (id) => { if(state.ui.selected.has(id)) state.ui.selected.delete(id); else state.ui.selected.add(id); app.renderAssets(); ui.updateBulkCount(); },
-            bulkDelete: async () => { if(!confirm('Hapus item?')) return; state.db.assets = state.db.assets.filter(a => !state.ui.selected.has(a.id)); ui.toggleMultiSelect(); app.renderAssets(); app.pushToGitHub('Bulk Del'); },
-            bulkUpdateStatus: async (val) => { state.db.assets.forEach(a => { if(state.ui.selected.has(a.id)) { a.cond = val; if(val==='Normal') a.issue=''; } }); ui.toggleMultiSelect(); app.renderAssets(); app.pushToGitHub('Bulk Upd'); }
-        };
-
-        const ui = {
-            switchTab: (t) => { ['assets','activity','finance'].forEach(x => { document.getElementById(`view-${x}`).classList.add('hidden'); document.getElementById(`tab-${x}`).classList.remove('border-accent', 'text-primary'); document.getElementById(`tab-${x}`).classList.add('border-transparent', 'text-slate-500'); }); document.getElementById(`view-${t}`).classList.remove('hidden'); document.getElementById(`tab-${t}`).classList.add('border-accent', 'text-primary'); document.getElementById(`tab-${t}`).classList.remove('border-transparent', 'text-slate-500'); },
-            showAIModal: () => { document.getElementById('modal-ai').classList.remove('hidden'); document.getElementById('modal-ai').classList.add('flex'); setTimeout(()=>document.getElementById('ai-input').focus(),100); },
-            showAssetModal: () => { document.getElementById('assetForm').reset(); document.getElementById('asset-id').value=''; ui.toggleIssueField('Normal'); document.getElementById('modal-asset').classList.remove('hidden'); document.getElementById('modal-asset').classList.add('flex'); },
-            editAsset: (id) => { const a = state.db.assets.find(x=>x.id===id); if(!a)return; document.getElementById('asset-id').value=a.id; document.querySelector(`input[name="cat"][value="${a.cat}"]`).checked=true; document.getElementById('asset-loc').value=a.loc; document.getElementById('asset-brand').value=a.brand; document.getElementById('asset-model').value=a.model; document.getElementById('asset-cond').value=a.cond; document.getElementById('asset-issue').value=a.issue; document.getElementById('asset-install').value=a.install; document.getElementById('asset-service').value=a.service; ui.toggleFormType(a.subtype); ui.toggleIssueField(a.cond); document.getElementById('modal-asset').classList.remove('hidden'); document.getElementById('modal-asset').classList.add('flex'); },
-            showActivityModal: () => { document.getElementById('modal-activity').classList.remove('hidden'); document.getElementById('modal-activity').classList.add('flex'); document.getElementById('act-time').value = dayjs().format('HH:mm'); },
-            showFinanceModal: () => { document.getElementById('modal-finance').classList.remove('hidden'); document.getElementById('modal-finance').classList.add('flex'); document.getElementById('fin-date').value = dayjs().format('YYYY-MM-DD'); },
-            showSettings: () => { document.getElementById('conf-owner').value = state.config.owner; document.getElementById('conf-repo').value = state.config.repo; document.getElementById('conf-token').value = state.config.token; document.getElementById('conf-gemini').value = state.config.gemini; document.getElementById('modal-settings').classList.remove('hidden'); document.getElementById('modal-settings').classList.add('flex'); },
-            closeModal: (id) => { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); },
-            toggleFormType: (sel) => { const cat = document.querySelector('input[name="cat"]:checked').value; const el = document.getElementById('asset-subtype'); el.innerHTML=''; (cat==='AC'?['Split','Cassette','Standing','Central']:['LED Bulb','TL','Downlight','Spotlight']).forEach(o=>{const op=document.createElement('option');op.text=o;op.value=o;if(sel===o)op.selected=true;el.add(op)}); },
-            toggleIssueField: (val) => { document.getElementById('issue-container').classList.toggle('hidden', val==='Normal'); },
-            toggleMultiSelect: () => { state.ui.multiSelect = !state.ui.multiSelect; state.ui.selected.clear(); document.getElementById('bulk-actions').classList.toggle('translate-y-full', !state.ui.multiSelect); app.renderAssets(); },
-            updateBulkCount: () => document.getElementById('selected-count').innerText = state.ui.selected.size
-        };
-
-        document.addEventListener('DOMContentLoaded', app.init);
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW Registered:', reg.scope))
+                    .catch(err => console.log('SW Error:', err));
+            });
+        }
     </script>
-    <script type="module" src="assets/js/app.js"></script>.
+
+    <!-- LOAD MAIN APPLICATION (MODULAR) -->
+    <script type="module" src="assets/js/app.js"></script>
+
 </body>
 </html>
-
