@@ -1,10 +1,11 @@
 {
-  "name": "TechPartner 6.0 Ultimate",
+  "name": "TechPartner 6.0 Operations",
   "short_name": "TechPartner",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
+  "description": "Sistem Manajemen Aset & Pemeliharaan Terpadu",
   "orientation": "portrait-primary",
   "icons": [
     {
