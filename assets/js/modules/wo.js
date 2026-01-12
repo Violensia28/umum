@@ -3,7 +3,7 @@ import { ut } from '../utils.js';
 import { db } from '../db.js';
 
 export const wo = {
-    // Buat WO Baru
+    // 1. Buat Tiket Baru
     create: (assetId, title, priority, desc, type = 'Repair') => {
         const item = {
             id: 'wo_' + ut.id(),
@@ -13,7 +13,7 @@ export const wo = {
             desc: desc,
             priority: priority, // 'Low', 'Med', 'High', 'Critical'
             type: type,         // 'Repair', 'Maintenance', 'Installation'
-            status: 'OPEN',     // 'OPEN', 'PROGRESS', 'DONE', 'VERIFIED'
+            status: 'OPEN',     // 'OPEN', 'PROGRESS', 'DONE'
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             completed_at: null,
@@ -26,7 +26,7 @@ export const wo = {
         return item;
     },
 
-    // Update Status WO
+    // 2. Update Status & PM Engine
     updateStatus: (woId, newStatus, notes = null) => {
         const w = state.db.work_orders.find(x => x.id === woId);
         if(!w) return;
@@ -35,27 +35,26 @@ export const wo = {
         w.updated_at = new Date().toISOString();
         if(notes) w.tech_notes = notes;
 
-        // LOGIKA PM ENGINE (Jantungnya Tahap 2)
-        // Jika Status jadi DONE, update data aset otomatis
+        // --- LOGIKA OTOMATISASI PM (Preventive Maintenance) ---
+        // Jika status DONE, update data aset terkait
         if (newStatus === 'DONE') {
             w.completed_at = new Date().toISOString();
             
-            // Cari aset terkait
             const asset = state.db.assets.find(a => a.id === w.asset_id);
             if (asset) {
-                // 1. Update Last Service Date di Aset
+                // A. Update Tanggal Servis Terakhir
                 asset.service = dayjs().format('YYYY-MM-DD');
                 
-                // 2. Jika Aset Rusak & WO tipe Repair -> Ubah jadi Normal
+                // B. Jika aset sebelumnya rusak & ini perbaikan -> Tandai Normal
                 if (asset.cond === 'Rusak' && w.type === 'Repair') {
                     asset.cond = 'Normal';
                     asset.issue = '';
                 }
 
-                // 3. Hitung Next PM Date (Otomatis)
-                // Cari interval PM berdasarkan Tipe Aset
+                // C. Hitung Jadwal Servis Berikutnya (Next PM)
+                // Default 90 hari jika tipe aset tidak ditemukan di master
                 const typeDef = state.db.master.asset_types.find(t => t.id === asset.type_id);
-                const interval = typeDef ? typeDef.pm_interval : 90; // Default 90 hari
+                const interval = typeDef ? typeDef.pm_interval : 90; 
                 
                 if (interval > 0) {
                     asset.next_pm_date = dayjs().add(interval, 'day').format('YYYY-MM-DD');
@@ -66,12 +65,16 @@ export const wo = {
         db.push(`WO ${w.no} -> ${newStatus}`);
     },
 
-    // Upload Foto ke WO (Before/After)
+    // 3. Upload Foto Bukti
     addPhoto: async (woId, type, file) => {
         const w = state.db.work_orders.find(x => x.id === woId);
         if(!w) return;
+        
         const b64 = await ut.compress(file);
+        
+        if(!w.photos) w.photos = { before: [], after: [] };
         if(!w.photos[type]) w.photos[type] = [];
+        
         w.photos[type].push(b64);
         db.push(`WO Photo ${type}`);
     }
