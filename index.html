@@ -11,47 +11,49 @@
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/900/900782.png">
 
     <!-- CSS FRAMEWORK & ICONS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PERBAIKAN CORS DI SINI -->
+    <script src="https://cdn.tailwindcss.com" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- JS LIBRARIES (WAJIB ADA UNTUK FITUR BARU) -->
-    <!-- 1. SweetAlert (Popup Cantik) -->
+    <!-- JS LIBRARIES -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- 2. DayJS (Format Tanggal) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.7/dayjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.7/locale/id.min.js"></script>
-    <!-- 3. Marked (Format Teks AI) -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- 4. PDF Engines (Export Laporan) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-    <!-- 5. QR Code Engine -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <!-- 6. Chart.js (Dashboard Visual) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <script>
-        dayjs.locale('id'); 
-        tailwind.config = {
-            theme: { 
-                extend: { 
-                    colors: { 
-                        primary: '#0f172a', 
-                        accent: '#2563eb', 
-                        ai: '#7c3aed', 
-                        success: '#059669', 
-                        danger: '#dc2626', 
-                        warning: '#d97706' 
-                    },
-                    animation: { 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
-                } 
+        // PERBAIKAN ERROR: Pengecekan apakah library berhasil dimuat sebelum digunakan
+        if (typeof dayjs !== 'undefined') {
+            dayjs.locale('id'); 
+        }
+
+        if (typeof tailwind !== 'undefined') {
+            tailwind.config = {
+                theme: { 
+                    extend: { 
+                        colors: { 
+                            primary: '#0f172a', 
+                            accent: '#2563eb', 
+                            ai: '#7c3aed', 
+                            success: '#059669', 
+                            danger: '#dc2626', 
+                            warning: '#d97706' 
+                        },
+                        animation: { 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
+                    } 
+                }
             }
+        } else {
+            console.warn("Tailwind CSS gagal dimuat. Tampilan mungkin tidak sempurna, namun fungsionalitas tetap berjalan.");
         }
     </script>
     <style>
         body { font-family: 'Segoe UI', Inter, sans-serif; background-color: #f1f5f9; color: #334155; }
         
-        /* Indikator Status Visual */
         .asset-card { transition: all 0.2s; border-left: 4px solid transparent; }
         .asset-card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
         .asset-card.selected { border: 2px solid #2563eb; background-color: #eff6ff; }
@@ -61,7 +63,6 @@
         .status-rusak { border-left-color: #dc2626; }
         .status-overdue { border-left-color: #7c3aed; background-color: #f5f3ff; }
         
-        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
@@ -101,7 +102,7 @@
         </div>
     </nav>
 
-    <!-- NAVIGATION TABS (DASHBOARD ADDED) -->
+    <!-- NAVIGATION TABS -->
     <div class="bg-white border-b px-6 flex gap-2 md:gap-6 text-xs md:text-sm overflow-x-auto tab-nav no-print shadow-sm z-20">
         <button onclick="ui.switchTab('dashboard')" id="tab-dashboard" class="py-4 border-b-2 border-accent text-primary font-bold flex items-center gap-2 transition hover:bg-slate-50 px-4 whitespace-nowrap"><i class="fa-solid fa-gauge-high"></i> Dashboard</button>
         <button onclick="ui.switchTab('assets')" id="tab-assets" class="py-4 border-b-2 border-transparent text-slate-500 font-medium flex items-center gap-2 transition hover:text-slate-800 hover:bg-slate-50 px-4 whitespace-nowrap"><i class="fa-solid fa-boxes-stacked"></i> Aset</button>
@@ -113,7 +114,7 @@
     <!-- MAIN VIEWS -->
     <main class="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-50 relative scroll-smooth">
         
-        <!-- ================= VIEW 0: DASHBOARD (VISUAL CHART) ================= -->
+        <!-- DASHBOARD -->
         <div id="view-dashboard" class="block max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
@@ -122,7 +123,6 @@
                 </div>
                 <div class="flex gap-2">
                     <button onclick="ui.switchTab('wo')" class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold hover:bg-slate-50 shadow-sm"><i class="fa-solid fa-tasks mr-2"></i> Cek Tugas</button>
-                    <!-- EXPORT BUTTON -->
                     <button onclick="app.downloadAssetReport()" class="px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold shadow-lg shadow-primary/20"><i class="fa-solid fa-file-export mr-2"></i> Cetak Ringkasan</button>
                 </div>
             </div>
@@ -130,7 +130,6 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="lg:col-span-1 bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
                     <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2"><i class="fa-solid fa-heart-pulse text-danger"></i> Kondisi Aset</h3>
-                    <!-- CANVAS UNTUK CHARTJS -->
                     <div class="h-64 flex items-center justify-center">
                         <canvas id="chart-asset-health"></canvas>
                     </div>
@@ -167,7 +166,7 @@
             </div>
         </div>
 
-        <!-- ================= VIEW 1: ASSETS (CRUD LENGKAP) ================= -->
+        <!-- ASSETS -->
         <div id="view-assets" class="hidden max-w-7xl mx-auto space-y-6">
             <div class="flex flex-col md:flex-row gap-4 sticky top-0 bg-slate-50/95 backdrop-blur z-10 py-3 no-print items-center">
                 <div class="relative flex-1 w-full">
@@ -181,7 +180,7 @@
             <div id="asset-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-20"></div>
         </div>
 
-        <!-- ================= VIEW 2: WORK ORDER ================= -->
+        <!-- WORK ORDER -->
         <div id="view-wo" class="hidden max-w-5xl mx-auto pb-20">
             <div class="flex justify-between items-center mb-6">
                 <div><h2 class="text-2xl font-black text-slate-800">Tiket Pekerjaan</h2><p class="text-xs text-slate-500">Antrean perbaikan & maintenance</p></div>
@@ -190,7 +189,7 @@
             <div id="wo-list" class="space-y-4"></div>
         </div>
 
-        <!-- ================= VIEW 3: ACTIVITY ================= -->
+        <!-- ACTIVITY -->
         <div id="view-activity" class="hidden max-w-5xl mx-auto pb-20">
             <div class="flex justify-between items-center mb-6">
                 <div><h2 class="text-2xl font-black text-slate-800">Log Harian</h2><p class="text-xs text-slate-500">Catatan aktivitas tim operasional</p></div>
@@ -204,14 +203,13 @@
             <div class="relative pl-6 space-y-8" id="activity-list"></div>
         </div>
 
-        <!-- ================= VIEW 4: FINANCE (INPUT BON) ================= -->
+        <!-- FINANCE -->
         <div id="view-finance" class="hidden max-w-4xl mx-auto pb-20">
             <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm mb-8 flex flex-col md:flex-row justify-between items-center gap-6">
                 <div class="text-center md:text-left">
                     <p class="text-slate-400 text-xs font-bold uppercase mb-1">Total Biaya Belanja</p>
                     <h2 class="text-4xl font-black text-slate-800 tracking-tight" id="finance-total">Rp 0</h2>
                 </div>
-                <!-- TOMBOL INPUT BON -->
                 <button onclick="ui.showModal('modal-finance')" class="w-full md:w-auto bg-emerald-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-700 transition flex items-center justify-center gap-2">
                     <i class="fa-solid fa-plus"></i> Input Bon Baru
                 </button>
@@ -220,12 +218,12 @@
         </div>
     </main>
 
-    <!-- FLOATING AI BUTTON -->
+    <!-- FLOATING AI -->
     <button id="ai-float-btn" onclick="ui.showModal('modal-ai')" class="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-ai to-indigo-600 text-white rounded-full shadow-2xl z-40 flex items-center justify-center animate-bounce-slow border-2 border-white/20">
         <i class="fa-solid fa-robot text-2xl"></i>
     </button>
 
-    <!-- BULK ACTIONS TOOLBAR -->
+    <!-- BULK ACTIONS -->
     <div id="bulk-actions" class="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-2xl z-40 transform translate-y-full transition-transform duration-300 flex justify-between items-center no-print">
         <div class="font-bold text-slate-700 flex items-center gap-3">
             <span class="bg-slate-100 text-accent px-4 py-1.5 rounded-lg text-sm font-mono" id="selected-count">0</span> 
@@ -237,9 +235,8 @@
         </div>
     </div>
 
-    <!-- ================== MODALS SECTION ================== -->
-
-    <!-- QR CODE MODAL -->
+    <!-- MODALS -->
+    <!-- QR MODAL -->
     <div id="modal-qr" class="fixed inset-0 bg-slate-900/60 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-xs text-center overflow-hidden">
             <div id="qr-print-area" class="p-8 flex flex-col items-center justify-center bg-white">
@@ -298,7 +295,7 @@
         </div>
     </div>
 
-    <!-- WO CREATE MODAL -->
+    <!-- WO MODALS -->
     <div id="modal-wo" class="fixed inset-0 bg-slate-900/60 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg flex flex-col max-h-[95vh]">
             <div class="p-6 border-b flex justify-between items-center bg-slate-50 rounded-t-3xl"><h3 class="font-bold text-lg text-slate-800">Buat Tiket WO</h3><button onclick="ui.closeModal('modal-wo')" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-times text-xl"></i></button></div>
@@ -319,7 +316,6 @@
         </div>
     </div>
 
-    <!-- FINISH WORK ORDER MODAL -->
     <div id="modal-finish-wo" class="fixed inset-0 bg-slate-900/60 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[95vh]">
             <div class="p-5 border-b flex justify-between items-center bg-emerald-50 rounded-t-2xl">
@@ -349,7 +345,7 @@
         </div>
     </div>
 
-    <!-- AI CHAT MODAL -->
+    <!-- AI CHAT -->
     <div id="modal-ai" class="fixed inset-0 bg-slate-900/85 hidden z-50 items-center justify-center p-4 backdrop-blur-md no-print">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl flex flex-col h-[85vh] overflow-hidden">
             <div class="bg-gradient-to-r from-ai to-indigo-800 p-6 flex justify-between items-center text-white">
@@ -371,7 +367,7 @@
         </div>
     </div>
 
-    <!-- ACTIVITY MODAL -->
+    <!-- LOG MODAL -->
     <div id="modal-activity" class="fixed inset-0 bg-slate-900/60 hidden z-50 items-center justify-center p-4 backdrop-blur-sm no-print">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
             <div class="p-5 border-b flex justify-between items-center bg-slate-50 rounded-t-2xl"><h3 class="font-bold text-lg text-slate-800">Catat Log Kegiatan</h3><button onclick="ui.closeModal('modal-activity')" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-times text-xl"></i></button></div>
@@ -446,8 +442,16 @@
         </div>
     </div>
 
-    <!-- SCRIPTS -->
-    <script>if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').then(reg => console.log('PWA: Ready.', reg.scope)).catch(err => console.log('PWA: Error.', err)); }); }</script>
+    <!-- PWA REGISTRATION -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('PWA: Ready.', reg.scope))
+                    .catch(err => console.log('PWA: Error.', err));
+            });
+        }
+    </script>
     <script type="module" src="assets/js/app.js"></script>
 
 </body>
