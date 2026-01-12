@@ -182,7 +182,7 @@
                             <input type="date" id="report-end" class="border p-2 rounded-lg text-sm text-slate-700 font-medium bg-slate-50">
                         </div>
                         <div class="flex gap-1 ml-2">
-                            <button onclick="app.downloadReport('pdf')" class="px-3 py-2 bg-red-50 text-red-600 border border-red-100 rounded-lg hover:bg-red-100 transition" title="Download PDF">
+                            <button onclick="app.downloadReport('pdf')" class="px-3 py-2 bg-red-50 text-red-600 border border-red-100 rounded-lg hover:bg-red-100 transition" title="Download PDF dengan Foto">
                                 <i class="fa-solid fa-file-pdf text-lg"></i>
                             </button>
                             <button onclick="app.downloadReport('word')" class="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg hover:bg-blue-100 transition" title="Download Word">
@@ -587,16 +587,36 @@
                         a.time,
                         a.tag,
                         a.title,
-                        a.desc || '-'
+                        a.desc || '-',
+                        '' // Placeholder for image column
                     ]);
 
                     doc.autoTable({
                         startY: 35,
-                        head: [['Tanggal', 'Jam', 'Kategori', 'Kegiatan', 'Deskripsi']],
+                        head: [['Tanggal', 'Jam', 'Kategori', 'Kegiatan', 'Deskripsi', 'Foto']],
                         body: tableRows,
                         theme: 'grid',
                         headStyles: { fillColor: [37, 99, 235] },
-                        columnStyles: { 4: { cellWidth: 70 } }
+                        columnStyles: { 
+                            4: { cellWidth: 60 }, 
+                            5: { cellWidth: 30 } 
+                        },
+                        bodyStyles: { minCellHeight: 25, valign: 'middle' },
+                        didDrawCell: (data) => {
+                            if (data.column.index === 5 && data.section === 'body') {
+                                const activity = activities[data.row.index];
+                                if (activity && activity.img) {
+                                     const dim = 23; 
+                                     const x = data.cell.x + (data.cell.width - dim) / 2;
+                                     const y = data.cell.y + (data.cell.height - dim) / 2;
+                                     try {
+                                        doc.addImage(activity.img, 'JPEG', x, y, dim, dim);
+                                     } catch (e) {
+                                        console.error('Error adding image', e);
+                                     }
+                                }
+                            }
+                        }
                     });
                     
                     doc.save(`Laporan_Kerja_${startDate}_${endDate}.pdf`);
