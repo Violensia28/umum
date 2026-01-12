@@ -10,44 +10,72 @@ import { qr } from './modules/qr.js';
 /**
  * TechPartner 6.0 - Main Application Controller
  * Menghubungkan logika bisnis (Modules) dengan antarmuka (UI)
+ * Dilengkapi dengan pengamanan terhadap error elemen null dan kendala jaringan.
  */
 const app = {
     // --- 1. INITIALIZATION ---
     init: async () => {
-        // A. Setup filter tanggal default untuk laporan
-        const s = dayjs().startOf('week').add(1,'day').format('YYYY-MM-DD');
-        const e = dayjs().endOf('week').add(1,'day').format('YYYY-MM-DD');
-        const startEl = document.getElementById('report-start');
-        const endEl = document.getElementById('report-end');
-        if(startEl) startEl.value = s;
-        if(endEl) endEl.value = e;
+        try {
+            // A. Setup filter tanggal default untuk laporan (Minggu berjalan)
+            const s = dayjs().startOf('week').add(1,'day').format('YYYY-MM-DD');
+            const e = dayjs().endOf('week').add(1,'day').format('YYYY-MM-DD');
+            
+            const startEl = document.getElementById('report-start');
+            const endEl = document.getElementById('report-end');
+            if(startEl) startEl.value = s;
+            if(endEl) endEl.value = e;
 
-        // B. Sinkronisasi Awal dengan Cloud
-        if(state.config.token) {
-            const res = await db.sync();
-            if(res.status === 'success') {
-                console.log("Cloud Database Terhubung.");
+            // B. Sinkronisasi Cloud dengan Mekanisme Timeout
+            if(state.config.token) {
+                // Mencegah aplikasi "hang" jika GitHub API atau CORS bermasalah
+                const syncPromise = db.sync();
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error("Koneksi Cloud lambat.")), 8000)
+                );
+
+                await Promise.race([syncPromise, timeoutPromise])
+                    .then(res => {
+                        if(res && res.status === 'success') console.log("Cloud Database Terhubung.");
+                    })
+                    .catch(err => {
+                        console.warn("Mode Offline Aktif:", err.message);
+                    });
+            } else {
+                // Tampilkan pengaturan jika konfigurasi belum lengkap
+                ui.showModal('modal-settings');
             }
-        } else {
-            // Jika token kosong, paksa buka pengaturan
-            ui.showModal('modal-settings');
-        }
 
-        // C. Jalankan Migrasi Struktur Data
-        state.initMigration();
-        
-        // D. Tampilkan Dashboard Utama (Default Tab Tahap 4)
-        ui.switchTab('dashboard');
-        
-        // E. Inisialisasi Dropdown Master Data
-        ui.populateLocationSelect();
-        ui.populateTypeSelect();
-        ui.populateAssetSelectForWO();
+            // C. Jalankan Migrasi Struktur Data (V1 ke V2)
+            state.initMigration();
+            
+            // D. Aktifkan Tampilan Dashboard secara Aman
+            // switchTab akan memicu renderDashboard yang sudah memiliki guard-clauses
+            ui.switchTab('dashboard');
+            
+            // E. Inisialisasi Data Dropdown untuk Form
+            ui.populateLocationSelect();
+            ui.populateTypeSelect();
+            ui.populateAssetSelectForWO();
+
+        } catch (fatalError) {
+            console.error("Critical Startup Error:", fatalError);
+            // Memberikan feedback visual jika terjadi error fatal saat startup
+            Swal.fire({
+                title: 'Sistem Bermasalah',
+                text: 'Beberapa komponen gagal dimuat. Pastikan koneksi stabil.',
+                icon: 'error',
+                confirmButtonText: 'Refresh Halaman'
+            }).then(() => {
+                // Seringkali refresh membantu membersihkan cache module yang korup
+                if (fatalError.message.includes('null')) location.reload();
+            });
+        }
     },
 
     // --- 2. WORK ORDER ACTIONS ---
     showWOModal: () => {
-        document.getElementById('woForm').reset();
+        const form = document.getElementById('woForm');
+        if(form) form.reset();
         ui.populateAssetSelectForWO();
         ui.showModal('modal-wo');
     },
@@ -60,7 +88,7 @@ const app = {
         const desc = document.getElementById('wo-desc').value;
         const type = document.getElementById('wo-type').value;
 
-        if(!assetId) return Swal.fire('Error', 'Pilih aset terlebih dahulu!', 'warning');
+        if(!assetId) return Swal.fire('Peringatan', 'Pilih aset yang bermasalah terlebih dahulu!', 'warning');
 
         wo.create(assetId, title, priority, desc, type);
         
@@ -73,13 +101,13 @@ const app = {
     updateWOStatus: (id, status) => {
         wo.updateStatus(id, status);
         ui.renderWO();
-        // Update dashboard karena status WO berubah
-        ui.renderDashboard();
+        ui.renderDashboard(); // Refresh angka WO Aktif di dashboard
     },
     
     showFinishWOModal: (id) => {
         state.ui.currentWOId = id;
-        document.getElementById('wo-finish-notes').value = '';
+        const noteEl = document.getElementById('wo-finish-notes');
+        if(noteEl) noteEl.value = '';
         ui.showModal('modal-finish-wo');
     },
     
@@ -90,7 +118,7 @@ const app = {
         
         if(!notes) return Swal.fire('Info', 'Mohon isi catatan penyelesaian.', 'warning');
 
-        // Handle foto bukti jika ada
+        // Lampirkan bukti foto jika tersedia
         const fileInput = document.getElementById('wo-finish-photo');
         if(fileInput && fileInput.files.length > 0) {
             await wo.addPhoto(id, 'after', fileInput.files[0]);
@@ -101,15 +129,17 @@ const app = {
         ui.closeModal('modal-finish-wo');
         ui.renderWO();
         ui.renderAssets();
-        ui.renderDashboard(); // Refresh statistik dashboard
+        ui.renderDashboard(); // Refresh statistik kesehatan aset
         
-        Swal.fire('Selesai', 'Pekerjaan ditutup. Data aset telah diperbarui.', 'success');
+        Swal.fire('Tuntas', 'Pekerjaan ditutup. Data aset telah diperbarui.', 'success');
     },
 
     // --- 3. ASSET ACTIONS ---
     showAssetModal: () => { 
-        document.getElementById('assetForm').reset(); 
-        document.getElementById('asset-id').value = ''; 
+        const form = document.getElementById('assetForm');
+        if(form) form.reset();
+        const idInput = document.getElementById('asset-id');
+        if(idInput) idInput.value = ''; 
         ui.populateLocationSelect(); 
         ui.populateTypeSelect(); 
         ui.toggleIssueField('Normal'); 
@@ -119,15 +149,19 @@ const app = {
     editAsset: (id) => { 
         const a = state.db.assets.find(x => x.id === id); 
         if(!a) return; 
-        document.getElementById('asset-id').value = a.id; 
+        
+        const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val || ''; };
+        
+        setVal('asset-id', a.id);
         ui.populateLocationSelect(a.location_id); 
         ui.populateTypeSelect(a.type_id); 
-        document.getElementById('asset-brand').value = a.brand || ''; 
-        document.getElementById('asset-model').value = a.model || ''; 
-        document.getElementById('asset-cond').value = a.cond; 
-        document.getElementById('asset-issue').value = a.issue || ''; 
-        document.getElementById('asset-install').value = a.install || ''; 
-        document.getElementById('asset-service').value = a.service || ''; 
+        setVal('asset-brand', a.brand); 
+        setVal('asset-model', a.model); 
+        setVal('asset-cond', a.cond); 
+        setVal('asset-issue', a.issue); 
+        setVal('asset-install', a.install); 
+        setVal('asset-service', a.service); 
+        
         ui.toggleIssueField(a.cond); 
         ui.showModal('modal-asset'); 
     },
@@ -153,10 +187,10 @@ const app = {
         
         ui.closeModal('modal-asset'); 
         ui.renderAssets(); 
-        ui.renderDashboard(); // Update chart kondisi aset
+        ui.renderDashboard(); 
         
         const locName = state.getLocationName(item.location_id); 
-        db.push(`Asset Update: ${locName}`); 
+        db.push(`Update Aset: ${locName}`); 
     },
 
     // --- 4. QR & REPORT ACTIONS ---
@@ -170,63 +204,88 @@ const app = {
     saveActivity: async (e) => { 
         e.preventDefault(); 
         const btn = e.target.querySelector('button[type="submit"]'); 
-        btn.innerText="Processing..."; btn.disabled=true; 
-        const photo = await ut.compress(document.getElementById('act-photo').files[0]); 
-        const item = { 
-            id: ut.id(), 
-            title: document.getElementById('act-title').value, 
-            time: document.getElementById('act-time').value, 
-            tag: document.getElementById('act-tag').value, 
-            desc: document.getElementById('act-desc').value, 
-            img: photo, 
-            date: dayjs().format('YYYY-MM-DD') 
-        }; 
-        state.db.activities.unshift(item); 
-        ui.closeModal('modal-activity'); 
-        ui.renderActivities(); 
-        btn.innerText="Simpan Log"; btn.disabled=false; 
-        db.push(`Activity: ${item.title}`); 
+        const originalText = btn.innerText;
+        btn.innerText = "Mengompres..."; btn.disabled = true; 
+        
+        try {
+            const file = document.getElementById('act-photo').files[0];
+            const photo = file ? await ut.compress(file) : null; 
+            const item = { 
+                id: ut.id(), 
+                title: document.getElementById('act-title').value, 
+                time: document.getElementById('act-time').value, 
+                tag: document.getElementById('act-tag').value, 
+                desc: document.getElementById('act-desc').value, 
+                img: photo, 
+                date: dayjs().format('YYYY-MM-DD') 
+            }; 
+            state.db.activities.unshift(item); 
+            ui.closeModal('modal-activity'); 
+            ui.renderActivities(); 
+            db.push(`Kegiatan: ${item.title}`); 
+        } catch (err) {
+            Swal.fire('Error', 'Gagal memproses gambar.', 'error');
+        } finally {
+            btn.innerText = originalText; btn.disabled = false; 
+        }
     },
 
     saveFinance: async (e) => { 
         e.preventDefault(); 
         const btn = e.target.querySelector('button[type="submit"]'); 
-        btn.innerText="Processing..."; btn.disabled=true; 
-        const photo = await ut.compress(document.getElementById('fin-photo').files[0]); 
-        const item = { 
-            id: ut.id(), 
-            item: document.getElementById('fin-item').value, 
-            cost: parseInt(document.getElementById('fin-cost').value), 
-            date: document.getElementById('fin-date').value, 
-            img: photo 
-        }; 
-        state.db.finances.unshift(item); 
-        ui.closeModal('modal-finance'); 
-        ui.renderFinance(); 
-        ui.renderDashboard(); // Update angka pengeluaran di dashboard
-        btn.innerText="Simpan"; btn.disabled=false; 
-        db.push(`Finance: ${item.item}`); 
+        const originalText = btn.innerText;
+        btn.innerText = "Menyimpan..."; btn.disabled = true; 
+        
+        try {
+            const file = document.getElementById('fin-photo').files[0];
+            const photo = file ? await ut.compress(file) : null; 
+            const item = { 
+                id: ut.id(), 
+                item: document.getElementById('fin-item').value, 
+                cost: parseInt(document.getElementById('fin-cost').value), 
+                date: document.getElementById('fin-date').value, 
+                img: photo 
+            }; 
+            state.db.finances.unshift(item); 
+            ui.closeModal('modal-finance'); 
+            ui.renderFinance(); 
+            ui.renderDashboard(); 
+            db.push(`Belanja: ${item.item}`); 
+        } catch (err) {
+            Swal.fire('Error', 'Gagal menyimpan data keuangan.', 'error');
+        } finally {
+            btn.innerText = originalText; btn.disabled = false; 
+        }
     },
 
     // --- 6. SYSTEM & CLOUD ---
     syncData: async () => {
         const badge = document.getElementById('sync-badge');
+        if(!badge) return;
+
         badge.classList.remove('bg-success', 'bg-danger');
         badge.classList.add('bg-warning', 'animate-pulse');
         
-        const res = await db.sync();
-        
-        badge.classList.remove('bg-warning', 'animate-pulse');
-        if(res.status === 'success') {
-            badge.classList.add('bg-success');
-            // Refresh tampilan tab yang sedang aktif
-            const activeTab = document.querySelector('.tab-nav button.border-accent').id.replace('tab-', '');
-            ui.switchTab(activeTab);
+        try {
+            const res = await db.sync();
+            badge.classList.remove('bg-warning', 'animate-pulse');
             
-            Swal.fire({ icon: 'success', title: 'Data Cloud Sinkron', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
-        } else {
+            if(res && res.status === 'success') {
+                badge.classList.add('bg-success');
+                // Segarkan tab yang aktif agar data terbaru muncul
+                const activeTabEl = document.querySelector('.tab-nav button.border-accent');
+                if(activeTabEl) {
+                    const activeTab = activeTabEl.id.replace('tab-', '');
+                    ui.switchTab(activeTab);
+                }
+                Swal.fire({ icon: 'success', title: 'Data Sinkron', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
+            } else {
+                throw new Error(res ? res.message : "Response kosong");
+            }
+        } catch (error) {
+            badge.classList.remove('bg-warning', 'animate-pulse');
             badge.classList.add('bg-danger');
-            Swal.fire('Sync Error', res.message, 'error');
+            Swal.fire('Sync Error', 'Gagal sinkronisasi ke GitHub. Cek Token atau Koneksi.', 'error');
         }
     },
 
@@ -249,7 +308,7 @@ const app = {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.db));
         const dl = document.createElement('a');
         dl.setAttribute("href", dataStr);
-        dl.setAttribute("download", `TechPartner_Backup_${dayjs().format('YYYYMMDD')}.json`);
+        dl.setAttribute("download", `TechPartner_Backup_${dayjs().format('YYYYMMDD_HHmm')}.json`);
         dl.click();
     },
 
@@ -259,26 +318,26 @@ const app = {
         reader.onload = (e) => {
             try {
                 const json = JSON.parse(e.target.result);
-                if(confirm("Tindakan ini akan menghapus data lokal dan menimpanya dengan backup. Lanjutkan?")) {
+                if(confirm("Tindakan ini akan menghapus data saat ini dan menggantinya dengan backup. Lanjutkan?")) {
                     state.db = json;
                     app.syncData();
                     location.reload();
                 }
             } catch(err) {
-                Swal.fire('Error', 'File backup tidak valid.', 'error');
+                Swal.fire('Format Salah', 'File backup tidak valid.', 'error');
             }
         };
         reader.readAsText(input.files[0]);
     }
 };
 
-// Expose app ke window agar event onclick di HTML bisa memanggil app.xxx
+// Expose ke window agar elemen HTML (onclick) bisa mengenali fungsi app.xxx
 window.app = app;
 window.ui = ui;
 window.ut = ut;
 window.ai = ai;
 
-// Mulai inisialisasi saat DOM siap
+// Mulai aplikasi saat struktur DOM selesai dimuat
 document.addEventListener('DOMContentLoaded', app.init);
 
 export { app };
