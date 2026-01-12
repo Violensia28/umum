@@ -1,36 +1,33 @@
+/**
+ * utils.js - Kumpulan Fungsi Bantu (Helper)
+ * Digunakan di seluruh aplikasi untuk format data & utilitas teknis.
+ */
 export const ut = {
-    // Generate ID unik
-    id: () => Date.now().toString(36) + Math.random().toString(36).substr(2),
-    
-    // Format Rupiah
-    fmtRp: (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n),
-    
-    // Base64 Encode/Decode (untuk GitHub API)
-    b64Enc: (str) => btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (m, p1) => String.fromCharCode('0x' + p1))),
-    b64Dec: (str) => decodeURIComponent(atob(str).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')),
-    
-    // Cek Overdue (90 hari)
-    isOverdue: (dateStr) => dateStr ? dayjs().diff(dayjs(dateStr), 'day') > 90 : false,
-    
-    // Preview Image dari Input File
-    previewImage: (input, imgId) => {
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = document.getElementById(imgId);
-                if(img) {
-                    img.src = e.target.result;
-                    img.classList.remove('hidden');
-                }
-            };
-            reader.readAsDataURL(input.files[0]);
-        }
+    // 1. ID Generator (Singkat & Unik berdasarkan Timestamp)
+    id: () => Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
+
+    // 2. Format Rupiah (Rp 1.000.000)
+    fmtRp: (n) => {
+        return new Intl.NumberFormat('id-ID', { 
+            style: 'currency', 
+            currency: 'IDR', 
+            minimumFractionDigits: 0 
+        }).format(n || 0);
     },
 
-    // Kompresi Gambar (Penting agar database JSON tidak meledak)
+    // 3. Cek apakah tanggal sudah lewat (Overdue)
+    // Return true jika tanggal target < hari ini
+    isOverdue: (dateStr) => {
+        if(!dateStr) return false;
+        return dayjs(dateStr).isBefore(dayjs(), 'day');
+    },
+
+    // 4. Kompresi Gambar (PENTING UNTUK PERFORMA)
+    // Mengubah file input menjadi Base64 string yang diperkecil (max 800px)
     compress: (file) => {
-        return new Promise((resolve) => {
-            if (!file) { resolve(null); return; }
+        return new Promise((resolve, reject) => {
+            if (!file) return resolve(null);
+            
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = (event) => {
@@ -38,15 +35,29 @@ export const ut = {
                 img.src = event.target.result;
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 800; // Resize ke max 800px
-                    const scaleSize = MAX_WIDTH / img.width;
-                    canvas.width = MAX_WIDTH;
-                    canvas.height = img.height * scaleSize;
                     const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    resolve(canvas.toDataURL('image/jpeg', 0.6)); // Kualitas 60%
-                }
-            }
+                    
+                    // Resize Logic (Max width/height 800px)
+                    const max = 800;
+                    let w = img.width;
+                    let h = img.height;
+                    
+                    if (w > h) {
+                        if (w > max) { h *= max / w; w = max; }
+                    } else {
+                        if (h > max) { w *= max / h; h = max; }
+                    }
+                    
+                    canvas.width = w;
+                    canvas.height = h;
+                    ctx.drawImage(img, 0, 0, w, h);
+                    
+                    // Compress Quality 0.7 (JPEG)
+                    resolve(canvas.toDataURL('image/jpeg', 0.7));
+                };
+                img.onerror = (err) => reject(err);
+            };
+            reader.onerror = (err) => reject(err);
         });
     }
 };
