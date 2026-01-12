@@ -1,20 +1,37 @@
 import { state } from './state.js';
 import { ut } from './utils.js';
-import { app } from './app.js'; // Untuk memanggil fungsi app.toggleSelect, app.editAsset dll
+import { app } from './app.js'; // Import app agar bisa dipanggil di onclick string
 
 export const ui = {
-    // --- TABS & MODALS ---
+    // --- TABS & MODALS NAVIGATION ---
     switchTab: (t) => {
-        ['assets','activity','finance'].forEach(x => { 
-            document.getElementById(`view-${x}`).classList.add('hidden'); 
+        // Sembunyikan semua view
+        ['assets','wo','activity','finance'].forEach(x => { 
+            const view = document.getElementById(`view-${x}`);
+            if(view) view.classList.add('hidden'); 
+            
             const tabBtn = document.getElementById(`tab-${x}`);
-            tabBtn.classList.remove('border-accent', 'text-primary'); 
-            tabBtn.classList.add('border-transparent', 'text-slate-500'); 
+            if(tabBtn) {
+                tabBtn.classList.remove('border-accent', 'text-primary'); 
+                tabBtn.classList.add('border-transparent', 'text-slate-500');
+            }
         });
-        document.getElementById(`view-${t}`).classList.remove('hidden'); 
+        
+        // Tampilkan view yang dipilih
+        const activeView = document.getElementById(`view-${t}`);
+        if(activeView) activeView.classList.remove('hidden'); 
+        
         const activeBtn = document.getElementById(`tab-${t}`);
-        activeBtn.classList.add('border-accent', 'text-primary'); 
-        activeBtn.classList.remove('border-transparent', 'text-slate-500');
+        if(activeBtn) {
+            activeBtn.classList.add('border-accent', 'text-primary'); 
+            activeBtn.classList.remove('border-transparent', 'text-slate-500');
+        }
+
+        // Render ulang data saat tab dibuka agar fresh
+        if(t === 'assets') ui.renderAssets();
+        if(t === 'wo') ui.renderWO();
+        if(t === 'activity') ui.renderActivities();
+        if(t === 'finance') ui.renderFinance();
     },
 
     showModal: (id) => { 
@@ -33,12 +50,14 @@ export const ui = {
         }
     },
 
-    // --- RENDER ASSETS ---
+    // --- RENDER ASSETS (TAMPILAN ASET) ---
     renderAssets: () => {
         const term = document.getElementById('searchAsset').value.toLowerCase();
         const list = document.getElementById('asset-list');
         
-        // Filter cerdas: cari di nama lokasi (hasil resolve ID), brand, model, atau issue
+        if(!list) return;
+
+        // Filter: Cari di Nama Lokasi, Brand, atau Masalah
         const filtered = state.db.assets.filter(a => {
             const locName = state.getLocationName(a.location_id).toLowerCase();
             return locName.includes(term) || 
@@ -46,7 +65,7 @@ export const ui = {
                    (a.issue && a.issue.toLowerCase().includes(term));
         });
 
-        // Update Stats
+        // Update Statistik Dashboard
         document.getElementById('stat-total').innerText = state.db.assets.length;
         document.getElementById('stat-overdue').innerText = state.db.assets.filter(a => ut.isOverdue(a.service)).length;
         document.getElementById('stat-normal').innerText = state.db.assets.filter(a=>a.cond==='Normal').length;
@@ -59,7 +78,7 @@ export const ui = {
             const locName = state.getLocationName(a.location_id);
             const typeName = state.getTypeName(a.type_id);
 
-            // Tentukan icon berdasarkan tipe
+            // Icon Mapping
             let iconClass = 'fa-box';
             if(a.type_id === 'type_ac') iconClass = 'fa-wind';
             if(a.type_id === 'type_light') iconClass = 'fa-lightbulb';
@@ -71,9 +90,7 @@ export const ui = {
                 ${state.ui.multiSelect ? `<div class="absolute top-3 right-3"><input type="checkbox" ${isSel?'checked':''} class="w-5 h-5 accent-accent"></div>` : ''}
                 
                 <div class="flex justify-between items-start mb-3">
-                    <div class="bg-slate-100 p-2 rounded-lg text-slate-500">
-                        <i class="fa-solid ${iconClass} text-xl"></i>
-                    </div>
+                    <div class="bg-slate-100 p-2 rounded-lg text-slate-500"><i class="fa-solid ${iconClass} text-xl"></i></div>
                     <div class="flex flex-col items-end">
                         ${isOverdue && a.cond==='Normal' ? '<span class="px-2 py-1 bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded uppercase mb-1">Telat Servis</span>' : ''}
                         ${a.cond!=='Normal' ? `<span class="px-2 py-1 rounded text-[10px] font-bold uppercase ${a.cond==='Rusak'?'bg-red-100 text-red-700':'bg-amber-100 text-amber-700'}">${a.cond}</span>` : ''}
@@ -96,35 +113,117 @@ export const ui = {
         }).join('');
     },
 
-    // --- FORM HELPERS ---
-    // Render opsi lokasi di form Add/Edit
+    // --- RENDER WORK ORDER (BARU TAHAP 2) ---
+    renderWO: () => {
+        const list = document.getElementById('wo-list');
+        if(!list) return; // Guard clause jika elemen tidak ditemukan
+
+        let data = state.db.work_orders || [];
+        
+        // Sorting: Prioritas (Critical > High > Med > Low)
+        data.sort((a,b) => {
+            const score = { 'Critical': 4, 'High': 3, 'Med': 2, 'Low': 1 };
+            // Jika score sama, urutkan berdasarkan yang terbaru (created_at desc)
+            if (score[b.priority] === score[a.priority]) {
+                return new Date(b.created_at) - new Date(a.created_at);
+            }
+            return score[b.priority] - score[a.priority];
+        });
+
+        if(data.length === 0) {
+            list.innerHTML = '<div class="text-center py-12 text-slate-400 border-2 border-dashed border-slate-200 rounded-xl">Belum ada Work Order aktif.<br><span class="text-xs">Klik "Buat WO" untuk memulai.</span></div>';
+            return;
+        }
+
+        list.innerHTML = data.map(w => {
+            const asset = state.db.assets.find(a => a.id === w.asset_id) || { brand: 'Unknown' };
+            const locName = state.getLocationName(asset.location_id);
+
+            // Warna Status Badge
+            const statusColor = { 
+                'OPEN': 'bg-blue-100 text-blue-700', 
+                'PROGRESS': 'bg-yellow-100 text-yellow-700', 
+                'DONE': 'bg-green-100 text-green-700', 
+                'VERIFIED': 'bg-slate-100 text-slate-700' 
+            }[w.status] || 'bg-gray-100 text-gray-700';
+
+            // Warna Border Prioritas
+            const priorityStyle = { 
+                'Critical': 'border-l-purple-600 bg-purple-50', 
+                'High': 'border-l-red-500', 
+                'Med': 'border-l-yellow-500', 
+                'Low': 'border-l-blue-500' 
+            }[w.priority] || 'border-l-gray-300';
+
+            return `
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 border-l-4 ${priorityStyle} relative mb-4 transition hover:shadow-md">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-[10px] font-bold text-slate-400 font-mono">${w.no} • ${dayjs(w.created_at).format('DD MMM')}</span>
+                    <span class="px-2 py-1 rounded text-[10px] font-bold uppercase ${statusColor}">${w.status}</span>
+                </div>
+                
+                <h4 class="font-bold text-slate-800 text-lg mb-1 leading-snug">${w.title}</h4>
+                <div class="text-xs text-slate-500 mb-3 flex items-center gap-1">
+                    <i class="fa-solid fa-location-dot"></i> ${locName} • <span class="font-semibold">${asset.brand}</span>
+                </div>
+                
+                <p class="text-sm text-slate-600 bg-white/50 p-2 rounded border border-slate-100 mb-3 italic">
+                    "${w.desc}"
+                </p>
+
+                <div class="flex gap-2 border-t pt-3">
+                    ${w.status === 'OPEN' ? 
+                        `<button onclick="app.updateWOStatus('${w.id}', 'PROGRESS')" class="flex-1 py-2 bg-accent text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition">Mulai Kerja</button>` : ''}
+                    
+                    ${w.status === 'PROGRESS' ? 
+                        `<button onclick="app.showFinishWOModal('${w.id}')" class="flex-1 py-2 bg-success text-white rounded-lg text-xs font-bold hover:bg-emerald-600 transition">Selesai</button>` : ''}
+                    
+                    ${w.status === 'DONE' ? 
+                        `<button class="flex-1 py-2 bg-slate-100 text-slate-400 rounded-lg text-xs font-bold cursor-not-allowed"><i class="fa-solid fa-check-double mr-1"></i> Menunggu Verif</button>` : ''}
+                        
+                    ${w.status === 'VERIFIED' ? 
+                        `<button class="flex-1 py-2 bg-slate-50 text-slate-400 rounded-lg text-xs font-bold cursor-default">Verified</button>` : ''}
+                </div>
+            </div>`;
+        }).join('');
+    },
+
+    // Filter WO (Client side filter sederhana)
+    filterWO: (status) => {
+        // Implementasi sederhana: render ulang semua, lalu hide yang tidak sesuai via CSS/JS di memori
+        // Tapi cara paling bersih adalah panggil renderWO() dengan parameter filter, 
+        // namun untuk saat ini kita manipulasi DOM langsung agar cepat.
+        
+        const list = document.getElementById('wo-list');
+        const cards = list.children; // Ambil semua elemen card
+        
+        for (let card of cards) {
+            // Kita cari text status di dalam card
+            // Cara ini agak 'hacky' tapi cepat tanpa ubah state logic
+            const statusText = card.querySelector('.uppercase').innerText; 
+            
+            if (status === 'All' || statusText === status) {
+                card.classList.remove('hidden');
+            } else {
+                card.classList.add('hidden');
+            }
+        }
+    },
+
+    // --- FORM HELPERS (POPULATE SELECT) ---
     populateLocationSelect: (selectedId = null) => {
         const el = document.getElementById('asset-location');
         if(!el) return;
         el.innerHTML = '<option value="">-- Pilih Lokasi --</option>';
         
-        // Group by Site (Parent)
-        // Ini implementasi sederhana Tahap 1, belum fully recursive tree UI
-        const sites = state.db.master.locations.filter(l => l.type === 'SITE');
-        
-        sites.forEach(site => {
-            const optGroup = document.createElement('optgroup');
-            optGroup.label = site.name;
-            
-            // Cari ruangan di bawah site ini (langsung atau via gedung/lantai - simplified for now)
-            // Di tahap 1, kita tampilkan semua non-site sebagai anak, atau filter berdasarkan parent logic jika data sudah rapi.
-            // Untuk migrasi awal, semua ROOM parent-nya mungkin default 'site_utama'.
-            // Kita tampilkan semua lokasi tipe ROOM saja biar mudah dipilih.
-            state.db.master.locations.filter(l => l.type !== 'SITE').forEach(loc => {
-                // Idealnya cek parent_id, tapi untuk awal tampilkan semua ROOM
-                 // Jika nanti sudah rapi, filter: if(loc.parent_id === site.id)
-                const op = document.createElement('option');
-                op.value = loc.id;
-                op.text = loc.name;
-                if(loc.id === selectedId) op.selected = true;
-                el.add(op); // Tambah ke select langsung (atau ke optGroup jika logic parent benar)
-            });
-            // el.add(optGroup); // Gunakan jika grouping sudah benar
+        // Ambil lokasi tipe 'SITE' untuk grouping (opsional) atau flat list
+        // Kita tampilkan semua lokasi selain SITE (jadi gedung/ruangan muncul)
+        state.db.master.locations.filter(l => l.type !== 'SITE').forEach(loc => {
+            const op = document.createElement('option');
+            op.value = loc.id; 
+            op.text = loc.name;
+            if(loc.id === selectedId) op.selected = true;
+            el.add(op);
         });
     },
 
@@ -134,31 +233,58 @@ export const ui = {
         el.innerHTML = '';
         state.db.master.asset_types.forEach(t => {
             const op = document.createElement('option');
-            op.value = t.id;
+            op.value = t.id; 
             op.text = t.name;
             if(t.id === selectedId) op.selected = true;
             el.add(op);
         });
     },
 
-    toggleIssueField: (val) => { 
-        document.getElementById('issue-container').classList.toggle('hidden', val==='Normal'); 
+    // Populate Asset untuk Dropdown Form WO
+    populateAssetSelectForWO: () => {
+        const el = document.getElementById('wo-asset-id');
+        if(!el) return;
+        el.innerHTML = '';
+        
+        if (state.db.assets.length === 0) {
+            el.innerHTML = '<option value="">Belum ada aset</option>';
+            return;
+        }
+
+        state.db.assets.forEach(a => {
+            const locName = state.getLocationName(a.location_id);
+            const op = document.createElement('option');
+            op.value = a.id;
+            // Tampilan: Lokasi - Merk Model
+            op.text = `${locName} | ${a.brand} ${a.model}`; 
+            el.add(op);
+        });
+    },
+
+    // --- UTILS ---
+    toggleIssueField: (val) => {
+        const el = document.getElementById('issue-container');
+        if (el) el.classList.toggle('hidden', val==='Normal'); 
     },
     
     updateBulkCount: () => {
-        document.getElementById('selected-count').innerText = state.ui.selected.size;
+        const el = document.getElementById('selected-count');
+        if (el) el.innerText = state.ui.selected.size;
     },
 
-    // Render Activity & Finance (Masih mirip lama, tapi dipisah function)
+    // --- RENDER ACTIVITY (LOG HARIAN) ---
     renderActivities: () => {
         const list = document.getElementById('activity-list');
+        if (!list) return;
+        
         const acts = state.db.activities || [];
-        if(acts.length === 0) {
-            document.getElementById('empty-activity').classList.remove('hidden'); 
+        if(acts.length === 0) { 
+            document.getElementById('empty-activity')?.classList.remove('hidden'); 
             list.innerHTML=''; 
-            return;
+            return; 
         }
-        document.getElementById('empty-activity').classList.add('hidden');
+        
+        document.getElementById('empty-activity')?.classList.add('hidden');
         list.innerHTML = acts.map(a => `
             <div class="relative pl-8 pb-8 border-l-2 border-slate-200 last:border-0 last:pb-0">
                 <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-white border-2 border-accent"></div>
@@ -176,17 +302,22 @@ export const ui = {
             </div>`).join('');
     },
 
+    // --- RENDER FINANCE ---
     renderFinance: () => {
         const list = document.getElementById('finance-list');
+        if (!list) return;
+
         const fins = state.db.finances || [];
-        document.getElementById('finance-total').innerText = ut.fmtRp(fins.reduce((acc,c)=>acc+(c.cost||0),0));
+        const totalEl = document.getElementById('finance-total');
+        if (totalEl) totalEl.innerText = ut.fmtRp(fins.reduce((acc,c)=>acc+(c.cost||0),0));
         
-        if(fins.length === 0) {
-            document.getElementById('empty-finance').classList.remove('hidden'); 
+        if(fins.length === 0) { 
+            document.getElementById('empty-finance')?.classList.remove('hidden'); 
             list.innerHTML=''; 
-            return;
+            return; 
         }
-        document.getElementById('empty-finance').classList.add('hidden');
+        
+        document.getElementById('empty-finance')?.classList.add('hidden');
         list.innerHTML = fins.map(f => `
             <div class="bg-white p-4 rounded-xl border border-slate-200 flex gap-4 items-center shadow-sm">
                 <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center flex-shrink-0">
